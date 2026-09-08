@@ -1,0 +1,25 @@
+X:1
+T:Black Is the Color
+C:Traditional - United States
+M:4/4
+L:1/8
+Q:"Andante" 1/4=80
+%%score M { RH LH }
+%%staffwidth 850
+%%barsperstaff 4
+%%barnumbers 0
+V:M clef=treble name="Melody" snm="Mel."
+V:RH clef=bass name="Piano RH" snm="RH"
+V:LH clef=bass name="Piano LH" snm="LH"
+K:Em
+% Blank accompaniment completed in measures 4, 6-9, and 11.
+% Final LH octave-down instruction is realized as sounding E1.
+[V:M] !mf!"^Em"!1!(E2 G2 B2 AB | "^Em"!1!E!4!E DE "^Bm"F2 D2 | "^Em"B,6) !1!(E2 | "^Em"B4-BE GB) |
+[V:RH] !mp!z !1!(E, !3!!5![G,B,]E, [G,B,]2 E,2) | z (E, [G,B,]2) z !1!(B,, !3!!5![D,F,]2) | z !1!(E, [G,B,]E, [G,B,]2 E,2) | z (E, [G,B,]E, [G,B,]2 E,2) |
+[V:LH] "_2"E,,8 | "_2"E,,4 "_5"B,,,4 | "_2"E,,8 | "_2"E,,8 |
+[V:M] "^Am"(AG A4) !2!(Bd | "^C"e2 ed "^D"!1!A2 !2!G!3!A | "^Am"cB AG "^Em/G"!1!E3) (E | "^Em"B4-BE G!5!B) |
+[V:RH] z !1!(A, !3!!5![CE]A, [CE]2) z2 | z (G, [CE]2) z (F, [A,D]2) | z (A, [CE]2) z (G, [B,E]2) | z (E, [G,B,]E, [G,B,]2 E,2) |
+[V:LH] "_1"A,,6 z2 | "_5"C,,4 "_4"D,,4 | "_1"A,,4 "_2"G,,4 | "_3"E,,8 |
+[V:M] "^Am"(!3!AB c6) | "^Em"!1!(E2 "^G/D"G2 "^C"B2 AB | "^Em"!1!E!4!E DE "^Bm"F2 "^rit."!>(!D2 | "^Em"B,8)!>)! |]
+[V:RH] z (A, [CE]A, [CE]2 A,2) | !1!!3!!5![E,G,B,]2 !1!!3!!5![D,G,B,]2 z !1!(C, [E,G,]2) | z (E, [G,B,]2) z (B,, "^rit."!>(![D,F,]2) | z (E, [G,B,]E,) z4!>)! |]
+[V:LH] "_1"A,,8 | "_3"E,,2 "_4"D,,2 "_5"C,,4 | "_2"E,,4 "_5"B,,,4 | "_2"E,,4 "_5"E,,,4 |]
