@@ -24,3 +24,12 @@ export function detectPitch(input,sampleRate,minHz=35,maxHz=500){
  return {midi:Math.round(midiFloat),cents:Math.round((midiFloat-Math.round(midiFloat))*100),hz,rms,confidence:1-center};
 }
 export function acceptPitch(detected,target,stableMs){return detected.midi===target&&detected.confidence>=.85&&Math.abs(detected.cents||0)<=40&&stableMs>=160;}
+
+export function validateProgress(data){
+ if(!data||data.song!=='Black Is the Color'||!data.records||typeof data.records!=='object'||Array.isArray(data.records))throw new Error('Choose a progress file exported from this practice page.');
+ const records={};for(const [key,value] of Object.entries(data.records)){
+  if(!/^[0-9]:(left|right|both)$/.test(key)||!value||typeof value!=='object')throw new Error('This progress file has an invalid practice entry.');
+  if(!Number.isInteger(value.attempts)||value.attempts<0||!Number.isInteger(value.clean)||value.clean<0||value.clean>value.attempts)throw new Error('This progress file has invalid attempt counts.');
+  records[key]={attempts:Math.min(value.attempts,100000),clean:Math.min(value.clean,100000),tempo:Number.isFinite(value.tempo)?Math.max(30,Math.min(90,value.tempo)):50,last:Number.isFinite(value.last)?value.last:0,rating:[0,1,2].includes(value.rating)?value.rating:0};
+ }return records;
+}

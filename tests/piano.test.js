@@ -1,0 +1,13 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import fs from 'node:fs';import crypto from 'node:crypto';
+import {PianoSound,sampleFor,sampleMidi,scheduleFrom,mergeTies,encodeWav} from '../piano.js';
+import {score} from '../score-data.js';import {eventsFor,validateProgress} from '../engine.js';
+test('piano samples cover every song and keyboard pitch within one semitone',()=>{for(let n=28;n<=76;n++)assert.ok(Math.abs(sampleMidi(sampleFor(n))-n)<=1);});
+test('bundled samples match their source hashes',()=>{const manifest=JSON.parse(fs.readFileSync(new URL('../assets/piano/manifest.json',import.meta.url)));for(const file of manifest){const data=fs.readFileSync(new URL('../assets/piano/'+file.file,import.meta.url));assert.equal(crypto.createHash('sha256').update(data).digest('hex'),file.sha256);assert.ok(data.length>1000);}});
+test('seeking into held bass resumes its remaining duration, without extra notes',()=>{const e=eventsFor(score,'left',1,2);const s=scheduleFrom(e,2,8);assert.deepEqual(s.map(e=>[e.at,e.length,e.notes[0]]),[[0,2,40],[2,2,40],[4,2,35]]);});
+test('melody ties make a single attack and preserve timing',()=>{const all=eventsFor(score,'melody',1,12);assert.equal(mergeTies(all).filter(e=>e.notes.length).length,53);const s=scheduleFrom(all,13,16);assert.equal(s[0].at,0);assert.equal(s[0].length,1.5);});
+test('last sounding attack is still the final E1 at beat 46',()=>{const s=scheduleFrom(eventsFor(score,'both',1,12),0,48);assert.equal(Math.max(...s.map(e=>e.at)),46);assert.deepEqual(s.at(-1).notes,[28]);assert.equal(s.at(-1).length,2);});
+test('WAV encoder emits stereo PCM with the correct header and duration',async()=>{const b={numberOfChannels:2,length:3,sampleRate:44100,getChannelData:c=>Float32Array.from(c?[.25,0,-.25]:[1,-1,0])},data=new DataView(await encodeWav(b).arrayBuffer());assert.equal(data.byteLength,56);assert.equal(data.getUint16(22,true),2);assert.equal(data.getUint32(24,true),44100);assert.equal(data.getUint32(40,true),12);assert.equal(data.getInt16(44,true),32767);assert.equal(data.getInt16(48,true),-32768);});
+test('restored progress rejects unrelated files and impossible ratings',()=>{assert.throws(()=>validateProgress({records:{}}));assert.throws(()=>validateProgress({song:score.title,records:{'0:left':{attempts:1,clean:3}}}));const valid=validateProgress({song:score.title,records:{'0:left':{attempts:3,clean:2,tempo:50,last:100,rating:2}}});assert.equal(valid['0:left'].clean,2);});
+
+test('muted hand never creates an audio source',()=>{assert.doesNotThrow(()=>PianoSound.prototype.note.call({},40,0,2,0));});
