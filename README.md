@@ -46,3 +46,9 @@ Progress can be downloaded and restored on another device. Import validates the 
 Samples: Salamander Grand Piano, Yamaha C5 recordings by Alexander Holm, CC BY 3.0. See `assets/piano/ATTRIBUTION.txt` and the source manifest for attribution, modifications, and checksums. Samples are served from this site, with no third-party runtime requests. Audio export uses these recordings.
 
 Automated checks cover score parity, final attack, ties, seeking held notes, muted voices, sample integrity, WAV encoding, progress validation, interleaving, and synthetic pitch detection. Browser offline rendering also verifies all 18 samples decode and produce finite stereo audio without clipping.
+
+## Following the score
+
+Sound & practice settings includes current notes/rests, whole-measure highlighting, or no highlighting. Current left-hand notes are green and right-hand notes are orange. Held notes remain highlighted while the other hand changes. An optional dashed outline previews the next entry. The Now / Next guide includes pitches, rests, and fingerings.
+
+Auto-scroll follows the active system during playback and count-in practice; it follows the score's clock, not microphone performance. Toggle it independently of highlighting. Tap a written note or rest to seek, or use Previous notes / Next notes to study each entry while paused. These controls preserve the chosen section and tempo. Settings are saved on this device.
