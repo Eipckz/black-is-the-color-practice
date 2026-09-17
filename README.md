@@ -80,7 +80,7 @@ Automated checks cover score parity, final attack, ties, seeking held notes, mut
 
 ## Following the score
 
-Sound & practice settings includes current notes/rests, whole-measure highlighting, or no highlighting. Current left-hand notes are green and right-hand notes are orange. Held notes remain highlighted while the other hand changes. An optional dashed outline previews the next entry. The Now / Next guide includes pitches, rests, and fingerings.
+Sound & practice settings includes current notes/rests, whole-measure highlighting, or no highlighting. Current left-hand notes are green and right-hand notes are orange. Held notes remain highlighted while the other hand changes. The Now / Next guide includes pitches, rests, and fingerings.
 
 Auto-scroll follows the active system during playback and count-in practice; it follows the score's clock, not microphone performance. Toggle it independently of highlighting. Tap a written note or rest to seek, or use Previous notes / Next notes to study each entry while paused. These controls preserve the chosen section and tempo. Settings are saved on this device.
 

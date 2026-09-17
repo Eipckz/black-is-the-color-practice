@@ -40,7 +40,7 @@ function render(){
  $('roundLabel').textContent='ROUND '+(state.completed+(state.rated?0:1))+' · MEASURES '+section().start+'–'+section().end;
  $('lessonTitle').textContent=section().name+' · '+handLabel();$('lessonGoal').textContent=section().goal;
  $('recallPrompt').textContent=state.phase==='learn'?'With the score open: find the first note, its finger, and the first rest.':'With the score open: prepare this section’s first hand position, then start here.';$('hint').textContent=section().hint;$('hint').hidden=true;$('showHint').hidden=false;
- $('scoreWrap').hidden=false;for(const name of ['previewNext','showCueGuide','autoFollow'])$(name).checked=state[name]??true;$('highlightMode').value=state.highlightMode||'notes';$('cueGuide').hidden=!$('showCueGuide').checked;
+ $('scoreWrap').hidden=false;for(const name of ['showCueGuide','autoFollow'])$(name).checked=state[name]??true;$('highlightMode').value=state.highlightMode||'notes';$('cueGuide').hidden=!$('showCueGuide').checked;
  try{ABCJS.renderAbc('notation',excerpt(),{responsive:'resize',staffwidth:largeScore()?300:540,add_classes:true,paddingright:10,paddingleft:10});bindCues();}catch(error){$('notation').textContent='Notation could not render. Use the PDF download below.';console.error(error);}
  $('noteGuide').replaceChildren();const events=eventsFor(score,state.hand,section().start,section().end);
  for(let m=section().start;m<=section().end;m++){const row=document.createElement('div');row.className='note-row';const title=document.createElement('strong');title.textContent='Bar '+m;row.append(title);const text=document.createElement('div');for(const e of events.filter(e=>Math.floor((e.beat+1e-6)/beatsPerMeasure)+1===m)){const line=document.createElement('div');let beat=e.beat%beatsPerMeasure+1,where=Number.isInteger(beat)?'Beat '+beat:'Beat '+Number(beat.toFixed(3));line.textContent=(state.hand==='both'?(e.voice==='left'?'LH ':'RH '):'')+where+': '+(e.notes.length?e.notes.map(noteName).join(' + '):'rest')+' · '+e.duration+' beat'+(e.duration===1?'':'s')+(e.notes.length&&fingers(e)?' · fingers '+fingers(e):'');text.append(line);}row.append(text);$('noteGuide').append(row);}
@@ -62,7 +62,7 @@ function cueText(list){return list.length?list.map(e=>(e.voice==='left'?'LH: ':'
 function markNotes(beat){
  const at=beat<0?{current:[],next:[]}:cueState(cues,beat),mode=$('highlightMode').value;
  const m=Math.floor(beat/beatsPerMeasure)-(section().start-1);highlight(at.current.flatMap(e=>e.notes),state.hand);
- for(const [cue,node] of cueNodes){node.classList.toggle('is-current',beat>=0&&(mode==='notes'?at.current.includes(cue):mode==='measure'&&Math.floor(cue.beat/beatsPerMeasure)-(section().start-1)===m));node.classList.toggle('is-next',beat>=0&&mode==='notes'&&$('previewNext').checked&&at.next.includes(cue));}
+ for(const [cue,node] of cueNodes){node.classList.toggle('is-current',beat>=0&&(mode==='notes'?at.current.includes(cue):mode==='measure'&&Math.floor(cue.beat/beatsPerMeasure)-(section().start-1)===m));}
  $('cueNow').textContent=beat<0?'Press Play or step through the score.':cueText(at.current);$('cueNext').textContent=beat<0?'Your next notes and fingerings will appear here.':cueText(at.next);
  if(beat<0){followLine=null;return;}
  const nodes=at.current.map(c=>cueNodes.get(c)).filter(Boolean);if(!nodes.length||!$('autoFollow').checked)return;
@@ -134,7 +134,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden){stopAudio(
 
 $('restoreProgress').onclick=()=>$('importProgress').click();
 
-for(const id of ['highlightMode','previewNext','showCueGuide','autoFollow'])$(id).onchange=()=>{state[id]=$(id).type==='checkbox'?$(id).checked:$(id).value;save();$('cueGuide').hidden=!$('showCueGuide').checked;followLine=null;markNotes((section().start-1)*beatsPerMeasure+positionBeat);};
+for(const id of ['highlightMode','showCueGuide','autoFollow'])$(id).onchange=()=>{state[id]=$(id).type==='checkbox'?$(id).checked:$(id).value;save();$('cueGuide').hidden=!$('showCueGuide').checked;followLine=null;markNotes((section().start-1)*beatsPerMeasure+positionBeat);};
 for(const [id,direction] of [['previousNote',-1],['nextNote',1]])$(id).onclick=()=>{const at=stepBeat(cues,(section().start-1)*beatsPerMeasure+positionBeat,direction);if(at!==undefined){stopAudio(false);seekTo(at-(section().start-1)*beatsPerMeasure);}};
 
 const midiKeys=new MidiKeys();let midiAttacks=new Set();
