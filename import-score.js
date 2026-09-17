@@ -85,8 +85,12 @@ export function importedExcerpt(score,hand,start,end,large=false){
 }
 export async function readMusicXMLFile(file){
   if(file.size>8000000)fail('Choose a score smaller than 8 MB.');
-  if(!/\.mxl$/i.test(file.name))return file.text();
-  const bytes=new Uint8Array(await file.arrayBuffer()),view=new DataView(bytes.buffer);let end=bytes.length-22;
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  // File pickers and export tools can supply inconsistent extensions and MIME types.
+  // Inspect the actual archive signature, then let the XML parser validate the score.
+  if(bytes.length<4||bytes[0]!==0x50||bytes[1]!==0x4b||bytes[2]!==3||bytes[3]!==4)return file.text();
+  if(bytes.length<22)fail('The MXL archive is invalid.');
+  const view=new DataView(bytes.buffer);let end=bytes.length-22;
   while(end>=Math.max(0,bytes.length-65557)&&view.getUint32(end,true)!==0x06054b50)end--;
   if(end<0||end<bytes.length-65557)fail('The MXL archive is invalid.');
   const count=view.getUint16(end+10,true),entries=new Map();let offset=view.getUint32(end+16,true);

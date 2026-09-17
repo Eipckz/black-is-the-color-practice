@@ -3,7 +3,7 @@ import {makeCues,cueState,stepBeat} from './follower.js?v=5';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=7';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore} from './library.js';
 let score=builtinScore, activeId=BUILTIN, library=[], beatsPerMeasure=4, pulse=1, pulsesPerMeasure=4;
 import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress} from './engine.js?v=5';
@@ -190,7 +190,7 @@ function activateScore(id){const entry=library.find(e=>e.id===id);if(id!==BUILTI
 $('scoreLibrary').onchange=()=>activateScore($('scoreLibrary').value);
 $('addScores').onclick=()=>$('scoreFiles').click();
 $('scoreFiles').onchange=async event=>{const files=[...event.target.files];if(!files.length)return;$('addScores').disabled=true;$('scoreLibrary').disabled=true;const results=[];let last=null;
- try{for(const file of files){try{if(!/\.(musicxml|xml|mxl)$/i.test(file.name))throw new Error('Choose MusicXML or MXL.');const source=await readMusicXMLFile(file),parsed=parseMusicXML(source,file.name),id=await scoreId(source);if(library.some(e=>e.id===id)){results.push(file.name+': already in your library; progress kept.');last=id;continue;}const entry={id,source,filename:file.name,score:parsed};await storeScore(entry);library.push(entry);last=id;results.push(file.name+': imported '+parsed.measures+' measures.');}catch(error){results.push(file.name+': '+error.message);}}if(last)activateScore(last);$('libraryStatus').textContent=results.join('\n');}finally{$('addScores').disabled=false;$('scoreLibrary').disabled=false;event.target.value='';}
+ try{for(const file of files){try{const source=await readMusicXMLFile(file),parsed=parseMusicXML(source,file.name),id=await scoreId(source);if(library.some(e=>e.id===id)){results.push(file.name+': already in your library; progress kept.');last=id;continue;}const entry={id,source,filename:file.name,score:parsed};await storeScore(entry);library.push(entry);last=id;results.push(file.name+': imported '+parsed.measures+' measures.');}catch(error){results.push(file.name+': '+error.message);}}if(last)activateScore(last);$('libraryStatus').textContent=results.join('\n');}finally{$('addScores').disabled=false;$('scoreLibrary').disabled=false;event.target.value='';}
 };
 async function restoreBackup(event){const file=event.target.files?.[0];if(!file)return;try{
  if(file.size>50000000)throw new Error('This backup exceeds 50 MB.');const data=JSON.parse(await file.text());
