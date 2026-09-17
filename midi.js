@@ -13,9 +13,10 @@ export class MidiKeys {
  }
  notes(){return [...new Set(this.down.values())].sort((a,b)=>a-b);}
 }
+const attacksFor=e=>e.tieEnds?e.notes.filter(n=>!e.tieEnds.includes(n)):e.tieEnd?[]:e.notes;
 export function midiTargets(events){
- const beats=[...new Set(events.filter(e=>e.notes.length&&!e.tieEnd).map(e=>e.beat))].sort((a,b)=>a-b);
- return beats.map(beat=>({beat,notes:[...new Set(events.filter(e=>e.beat<=beat&&beat<e.beat+e.duration).flatMap(e=>e.notes))].sort((a,b)=>a-b),attacks:[...new Set(events.filter(e=>e.beat===beat&&!e.tieEnd).flatMap(e=>e.notes))]}));
+ const beats=[...new Set(events.filter(e=>attacksFor(e).length).map(e=>e.beat))].sort((a,b)=>a-b);
+ return beats.map(beat=>({beat,notes:[...new Set(events.filter(e=>e.beat<=beat&&beat<e.beat+e.duration).flatMap(e=>e.notes))].sort((a,b)=>a-b),attacks:[...new Set(events.filter(e=>e.beat===beat).flatMap(attacksFor))]}));
 }
 export function matchesTarget(target,held,attacks){return held.length===target.notes.length&&target.notes.every(n=>held.includes(n))&&target.attacks.every(n=>attacks.has(n));}
 export class MidiConnection {
@@ -29,7 +30,7 @@ export class MidiConnection {
 // Onset windows in seconds, scaled with tempo and bounded for usability.
 export function timingWindow(tempo,level='balanced'){const factors={relaxed:.35,balanced:.25,tighter:.15};return Math.max(.09,Math.min(.3,(60/tempo)*(factors[level]??.25)));}
 export class RhythmCheck {
- constructor(events,tempo,level){this.window=timingWindow(tempo,level);this.seconds=60/tempo;this.expected=events.filter(e=>!e.tieEnd).flatMap(e=>e.notes.map(note=>({note,time:e.beat*this.seconds,matched:false})));this.wrong=0;this.stray=0;this.hits=[];}
+ constructor(events,tempo,level){this.window=timingWindow(tempo,level);this.seconds=60/tempo;this.expected=events.flatMap(e=>attacksFor(e).map(note=>({note,time:e.beat*this.seconds,matched:false})));this.wrong=0;this.stray=0;this.hits=[];}
  hit(note,time){
   const candidates=this.expected.filter(e=>!e.matched&&e.note===note&&Math.abs(e.time-time)<=Math.max(.65,this.window*2));
   candidates.sort((a,b)=>Math.abs(a.time-time)-Math.abs(b.time-time));const target=candidates[0];

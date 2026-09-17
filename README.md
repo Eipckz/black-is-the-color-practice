@@ -1,4 +1,35 @@
-# Black Is the Color - piano practice
+# At the Piano: repertoire practice
+
+A static GitHub Pages practice room with a persistent score library. The original Black Is the Color accompaniment remains included. No account, server, analytics, or score uploads.
+
+## Library and four practice stages
+
+- The library sidebar lists saved pieces and their last practice stage. Select a piece to restore its stage, section, hand, tempo, targets, and progress. On phones the library appears above the workspace.
+- Import one or several `.musicxml`, `.xml`, or compressed `.mxl` files. Source MusicXML is stored locally in IndexedDB and can be downloaded again. Identical source files reuse their existing entry.
+- Learn each hand, combine hands, polish, then use the fourth **Whole piece** tab for a complete play-through. The fourth tab retains playback, pause, seek, count-in, loop, MIDI practice, note navigation, and audio export.
+- Each stage has its own round counter and saved section/hand. Tab, hand, and section navigation does not add rounds. Rate an attempt once to complete a round, then choose Next practice round. Reloading or switching tabs cannot rate the same round again.
+- The built-in piece starts with 24 separate-hand, 12 combined-hand, and 18 polishing rounds, 54 total. New scores get targets based on their two-measure sections and transitions. Targets are editable plans, not mastery guarantees; stages are always accessible and extra rounds are unlimited.
+- Existing Black Is the Color practice records and settings are retained. The legacy global round number counted navigation, so it is deliberately not treated as completed practice.
+- Download library backup saves all imported source scores and progress. Restore validates scores and identities, keeps newer local practice records and higher round counts, and also accepts the old single-piece progress format when the built-in piece is selected.
+
+Storage belongs to this browser and site origin. It does not synchronize automatically between devices. Download backups before clearing browser data or moving devices. Import and save errors are shown visibly.
+
+## MusicXML support
+
+Export one concert-pitch piano part with one or two staves, standard treble/bass clefs, and a constant numeric meter. Import retains pitches, durations, accidentals, chords, multiple overlapping voices, ties, and supplied fingerings. Overlapping voices are represented as tied chord slices in the practice notation, so engraving differs from the source. The note guide retains fingering text; standard finger numbers 1 through 5 also appear above the notes.
+
+Expand repeats and jumps before export. Grace notes, changing meters, transposing parts, percussion, and overlapping unisons are rejected with an explanation. Short measures including pickups are padded with rests. Practice notation uses the opening clefs and explicit accidentals. Expressive dynamics, pedal, ornaments, articulations, and tempo changes are not reproduced; consult the original source for those markings. Playback tempo is quarter-note BPM, with meter-appropriate count-in subdivisions.
+
+ABC, MIDI, PDF, and photo import are not implemented. Convert through a notation app to MusicXML where supported. The original piece's ABC, MIDI, and PDF downloads remain available.
+
+## Validation
+
+Run `npm ci` and `npm test`. The development-only DOM parser supports MusicXML tests; the deployed site has no npm runtime dependency or build step. Tests cover stage persistence, legacy migration, unlimited extra rounds, variable score lengths, MusicXML fingerings/meter/overlapping voices, tied playback and MIDI attacks, rejected notation, plus the original audio, pitch, follower, and MIDI checks.
+
+Browser checks cover independent stage counters, full-piece rendering and playback, MusicXML and compressed MXL import, batch import, duplicate handling, library switching, reload, backup restore, and desktop/mobile layout. Physical piano and microphone hardware have not been tested in this update.
+
+## Original project details
+
 
 A static, phone-friendly practice room for the supplied 12-measure accompaniment. The visible score is retained throughout practice. No account, backend, analytics, or audio uploads.
 

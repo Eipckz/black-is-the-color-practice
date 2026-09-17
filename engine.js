@@ -1,6 +1,6 @@
 export const noteName = n => ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'][n%12]+(Math.floor(n/12)-1);
 export const frequency = n => 440*Math.pow(2,(n-69)/12);
-export function eventsFor(score,hand,start,end){return score.voices.filter(v=>hand==='both'?['left','right'].includes(v.id):v.id===hand).flatMap(v=>v.events.filter(e=>e.beat>=(start-1)*4&&e.beat<end*4).map(e=>({...e,voice:v.id}))).sort((a,b)=>a.beat-b.beat);}
+export function eventsFor(score,hand,start,end){return score.voices.filter(v=>hand==='both'?['left','right'].includes(v.id):v.id===hand).flatMap(v=>v.events.filter(e=>e.beat>=(start-1)*(score.beatsPerMeasure||4)&&e.beat<end*(score.beatsPerMeasure||4)).map(e=>({...e,voice:v.id,...(Math.abs(e.beat-(start-1)*(score.beatsPerMeasure||4))<1e-6?{tieEnd:false,...(e.tieEnds?{tieEnds:[]}: {})}: {})}))).sort((a,b)=>a.beat-b.beat);}
 export function nextLesson(records,phase,previous,round){
  const hands=phase==='learn'?['left','right']:phase==='mix'?['both','left','right']:['both'];
  const sections=phase==='polish'?[0,1,2,3,4,5,6,7,8]:[0,1,2,3,4,5];
