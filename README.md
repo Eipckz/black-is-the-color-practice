@@ -2,6 +2,12 @@
 
 A static GitHub Pages practice room with a persistent score library. The original Black Is the Color accompaniment remains included. No account, server, analytics, or score uploads.
 
+## Compact practice view
+
+The default compact view puts the score, transport, live estimate, ratings, and next round together. Show library opens a drawer; Full view restores introductory material. Settings, keyboard, MIDI, microphone, practice plan, and downloads are collapsible. Landscape iPad gets a compact two-measure layout; portrait and phones reflow vertically.
+
+Start timer (or playback) measures active practice. Rating pauses the timer; Next practice round starts it again. Hidden tabs and reloads pause timing. After three timed rated rounds of at least ten seconds, the estimate uses recent round durations, remaining stage targets, and a retry allowance from self-ratings. It updates each second during timed practice and persists per piece, including in backups. The displayed range is a heuristic planning range, not a statistically calibrated confidence interval or a prediction of mastery. Existing untimed progress is retained but is not invented timing evidence.
+
 ## Library and four practice stages
 
 - The library sidebar lists saved pieces and their last practice stage. Select a piece to restore its stage, section, hand, tempo, targets, and progress. On phones the library appears above the workspace.
