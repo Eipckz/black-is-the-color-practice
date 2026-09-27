@@ -1,6 +1,6 @@
 import {timingState,recordTimedRound,estimatePractice,timeText} from './estimate.js?v=9';
 import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWindow} from './midi.js?v=5';
-import {makeCues,cueState,stepBeat} from './follower.js?v=5';
+import {makeCues,cueState,stepBeat,alteredNoteHeads} from './follower.js?v=10';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js?v=8';
@@ -59,7 +59,9 @@ function voiceLevel(voice){return voice==='left'?(state.leftVolume??70)/100:voic
 function highlight(notes=[],hand='right'){document.querySelectorAll('#keyboard button').forEach(k=>{k.classList.toggle('lit',notes.includes(Number(k.dataset.note)));k.classList.toggle('left',hand==='left');});}
 function bindCues(){
  cues=makeCues(eventsFor(score,state.hand,section().start,section().end),state.hand,section().start,beatsPerMeasure);cueNodes=new Map();
- for(const cue of cues){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';node.onclick=()=>seekTo(cue.beat-(section().start-1)*beatsPerMeasure);}
+ for(const cue of cues){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';node.onclick=()=>seekTo(cue.beat-(section().start-1)*beatsPerMeasure);
+ const altered=alteredNoteHeads(cue);for(const head of node.querySelectorAll('.abcjs-notehead')){const name=(head.getAttribute('data-name')||'').replace(/^[=^_]+/,'');const pitch=altered.find(p=>p.name===name);if(pitch){head.classList.add('altered-pitch');head.setAttribute('aria-label',pitch.label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=pitch.label;head.append(title);}}
+ }
 }
 function cueText(list){return list.length?list.map(e=>(e.voice==='left'?'LH: ':'RH: ')+(e.notes.length?e.notes.map(noteName).join(' + ')+(fingers(e)?' · fingers '+fingers(e):''):'rest')).join(' | '):'End of section';}
 function markNotes(beat){

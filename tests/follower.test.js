@@ -28,3 +28,12 @@ test('selectors remain unique for every hand and excerpt start',()=>{
  if(hand!=='both')assert.ok(c.every(e=>e.selector.startsWith('.abcjs-v0.')));
  }
 });
+
+test('altered noteheads include key-signature flats and explicit sharps but exclude naturals',async()=>{
+ const {alteredNoteHeads}=await import('../follower.js');
+ const e={notes:[50,53,58],spellings:[{step:'D',octave:3,alter:0},{step:'F',octave:3,alter:0},{step:'B',octave:3,alter:-1}]};
+ assert.deepEqual(alteredNoteHeads(e),[{name:'B,',alter:-1,label:'B flat 3'}]);
+ assert.deepEqual(alteredNoteHeads({notes:[65],spellings:[{step:'E',octave:4,alter:1}]}),[{name:'E',alter:1,label:'E sharp 4'}]);
+ assert.deepEqual(alteredNoteHeads({notes:[]}),[]);
+ assert.equal(alteredNoteHeads({notes:[50,54]})[0].name,'F,');
+});

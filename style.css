@@ -26,3 +26,6 @@ header{max-width:none;padding:10px 20px;align-items:center;min-height:58px}.head
 @media(orientation:landscape) and (min-width:900px){
 .focus-mode header{min-height:48px;padding-top:2px;padding-bottom:2px}.focus-mode .header-actions button{min-height:40px}.focus-mode .phases{margin:4px 0}.focus-mode .phases button{min-height:36px;padding:6px}.focus-mode .lesson>.section-head{display:none}.focus-mode #lessonTitle{margin:2px 0 4px}.focus-mode .position label{display:none}.focus-mode .practice-estimate{padding:4px 8px;margin:4px 0}.focus-mode .practice-estimate button{min-height:32px}.focus-mode.short-excerpt #notation svg{max-height:clamp(145px,24dvh,230px)}.focus-mode .cue-guide>div{padding:4px 8px}.focus-mode .cue-guide p{margin:0}.focus-mode .score-navigation{margin:2px 0}
 }
+/* Keep pitch reminders visible while stems retain the active hand color. */
+#notation .abcjs-notehead.altered-pitch{fill:#7736ad;stroke:none}
+#notation .is-current .abcjs-notehead.altered-pitch{fill:#7736ad;stroke:#7736ad;stroke-width:.7;paint-order:stroke fill}

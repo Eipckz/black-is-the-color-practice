@@ -2,6 +2,8 @@
 
 A static GitHub Pages practice room with a persistent score library. The original Black Is the Color accompaniment remains included. No account, server, analytics, or score uploads.
 
+Sharp and flat noteheads appear purple, including alterations supplied by the key signature. Natural notes retain their normal color. During playback, altered noteheads stay purple while the current note stem follows the hand highlight color.
+
 ## Compact practice view
 
 The default compact view puts the score, transport, live estimate, ratings, and next round together. Show library opens a drawer; Full view restores introductory material. Settings, keyboard, MIDI, microphone, practice plan, and downloads are collapsible. Landscape iPad gets a compact two-measure layout; portrait and phones reflow vertically.
