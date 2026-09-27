@@ -16,6 +16,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   const measures=children(parts[0],'measure');
   if(!measures.length||measures.length>500)fail('Import between 1 and 500 measures at a time.');
   let divisions=1,meter=null,beats=4,beatType=4,key=0,tempo=80;
+  const measureKeys=[];
   const raw={right:[],left:[]},clefs={right:'treble',left:'bass'};
   const warnings=new Set(['Playback uses a steady tempo. Follow expressive dynamics, pedal, ornaments, and tempo changes yourself.']);
   measures.forEach((measure,index)=>{
@@ -24,9 +25,10 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
       divisions=number(attr,'divisions',divisions);if(!(divisions>0))fail('Invalid MusicXML divisions.');
       const time=attr.querySelector('time');
       if(time){const b=number(time,'beats',4),t=number(time,'beat-type',4);if(!Number.isInteger(b)||b<1||b>12||![2,4,8,16].includes(t))fail('Use a simple numeric time signature.');if(meter&&meter!==`${b}/${t}`)fail('Changing time signatures are not supported yet. Import each constant-meter section separately.');beats=b;beatType=t;meter=`${b}/${t}`;}
-      const nextKey=number(attr,'key fifths',key);if(index&&nextKey!==key)warnings.add('Key changes are shown using explicit accidentals.');key=nextKey;
+      const nextKey=number(attr,'key fifths',key);if(!Number.isInteger(nextKey)||Math.abs(nextKey)>7)fail('Use a standard key signature with at most seven sharps or flats.');key=nextKey;
       for(const clef of children(attr,'clef')){const staff=Number(clef.getAttribute('number')||1),sign=text(clef,'sign'),line=number(clef,'line',sign==='F'?4:2);if(!((sign==='G'&&line===2)||(sign==='F'&&line===4))||number(clef,'clef-octave-change',0)!==0)fail('Only standard treble and bass clefs are supported.');if(index)warnings.add('The practice score uses the opening clefs throughout.');else clefs[staff===2?'left':'right']=sign==='F'?'bass':'treble';}
     }
+    measureKeys.push(key);
     const length=beats*4/beatType,base=index*length;let cursor=0,previous=null;
     const sound=measure.querySelector('sound[tempo]');if(index===0&&sound)tempo=Number(sound.getAttribute('tempo'))||80;
     for(const element of measure.children){
@@ -50,7 +52,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   if(!raw.right.length&&!raw.left.length)fail('The score contains no playable piano notes.');
   const beatsPerMeasure=beats*4/beatType;
   const voices=Object.entries(raw).map(([id,notes])=>({id,events:segmentNotes(notes,measures.length,beatsPerMeasure)}));
-  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',beatsPerMeasure,clefs,voices,warnings:[...warnings],imported:true};
+  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',beatsPerMeasure,clefs,measureKeys,voices,warnings:[...warnings],imported:true};
 }
 // Split overlapping voices into chord slices, retaining per-note ties and fingerings.
 export function segmentNotes(notes,measures,length){
@@ -67,16 +69,21 @@ export function segmentNotes(notes,measures,length){
   return events;
 }
 const fraction=value=>{let denominator=1;while(denominator<100000&&Math.abs(value*denominator-Math.round(value*denominator))>1e-5)denominator++;return `${Math.round(value*denominator)}/${denominator}`;};
+const keyNames=['Cb','Gb','Db','Ab','Eb','Bb','F','C','G','D','A','E','B','F#','C#'];
+const keyAlter=(step,fifths)=>((fifths>0?'FCGDAEB':'BEADGCF').slice(0,Math.abs(fifths)).includes(step)?Math.sign(fifths):0);
 export function importedExcerpt(score,hand,start,end,large=false){
   const ids=hand==='both'?['right','left']:[hand];
   let abc=`X:1\nT:Measures ${start}-${end}\nM:${score.meter}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${large?1:2}\n%%staffwidth ${large?300:540}\n%%stretchlast 1\n`;
   for(const id of ids)abc+=`V:${id} clef=${score.clefs[id]} name="${id==='right'?'RH':'LH'}"\n`;
-  abc+='K:C\n';
+  const openingKey=score.measureKeys?.[start-1]??0;
+  abc+='K:'+keyNames[openingKey+7]+'\n';
   for(const id of ids){abc+=`[V:${id}] `;const events=score.voices.find(v=>v.id===id).events;
     for(let m=start;m<=end;m++){
+      const fifths=score.measureKeys?.[m-1]??0,accidentals=new Map();
+      if(m>start&&fifths!==(score.measureKeys?.[m-2]??0))abc+='[K:'+keyNames[fifths+7]+'] ';
       for(const e of events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m)){
         if(!e.notes.length){abc+='z'+fraction(e.duration)+' ';continue;}
-        const tokens=e.notes.map((n,i)=>{const p=e.spellings[i];let pitch=p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave));const accidental=p.alter>0?'^'.repeat(p.alter):p.alter<0?'_'.repeat(-p.alter):'=';return accidental+pitch+(e.tieStarts.includes(n)?'-':'');});
+        const tokens=e.notes.map((n,i)=>{const p=e.spellings[i];let pitch=p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave));const previous=accidentals.get(pitch)??keyAlter(p.step,fifths);const accidental=p.alter===previous?'':p.alter>0?'^'.repeat(p.alter):p.alter<0?'_'.repeat(-p.alter):'=';accidentals.set(pitch,p.alter);return accidental+pitch+(e.tieStarts.includes(n)?'-':'');});
         const fingering=e.fingers.filter(f=>/^[1-5]$/.test(f)).map(f=>'!'+f+'!').join('');
         abc+=fingering+(tokens.length>1?'['+tokens.join('')+']':tokens[0].replace(/-$/,''))+fraction(e.duration)+(tokens.length===1&&tokens[0].endsWith('-')?'-':'')+' ';
       }abc+='| ';

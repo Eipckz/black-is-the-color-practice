@@ -40,7 +40,14 @@ export function chooseLesson(state, sections, measures){
   const hands=state.phase==='learn'?['left','right']:['both'];
   const count=state.phase==='polish'?sections.length-1:Math.ceil(measures/2);
   let candidates=Array.from({length:count},(_,section)=>hands.map(hand=>({section,hand}))).flat();
-  const other=candidates.filter(c=>c.section!==state.section||c.hand!==state.hand);if(other.length)candidates=other;
+  // Return to a passage after practising a different one, including in separate-hands mode.
+  const otherSections=candidates.filter(c=>c.section!==state.section);
+  const other=otherSections.length?otherSections:candidates.filter(c=>c.hand!==state.hand);
+  if(other.length)candidates=other;
   const priority=c=>{const r=state.records[c.section+':'+c.hand]||{};return (r.clean||0)*4+(r.attempts||0)*.5;};
-  return candidates.sort((a,b)=>priority(a)-priority(b))[0];
+  // Fresh imports have identical records. Break those ties by jumping across the
+  // piece instead of relying on the original, sequential measure order.
+  const nextSection=((state.section%count)+Math.max(1,Math.floor(count/2)))%count;
+  const distance=c=>(c.section-nextSection+count)%count;
+  return candidates.sort((a,b)=>priority(a)-priority(b)||distance(a)-distance(b)||Number(a.hand===state.hand)-Number(b.hand===state.hand))[0];
 }

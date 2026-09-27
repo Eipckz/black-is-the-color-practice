@@ -2,8 +2,8 @@ import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWind
 import {makeCues,cueState,stepBeat} from './follower.js?v=5';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
-import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=7';
+import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js?v=8';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=8';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore} from './library.js';
 let score=builtinScore, activeId=BUILTIN, library=[], beatsPerMeasure=4, pulse=1, pulsesPerMeasure=4;
 import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress} from './engine.js?v=5';
@@ -211,7 +211,7 @@ function checkedState(value,parts,measures){
  const clean={records};for(const key of ['phase','hand','section','stages','targets','tempo','customStart','customEnd','volume','leftVolume','rightVolume','countBars','scoreSize','highlightMode','previewNext','showCueGuide','autoFollow'])if(Object.hasOwn(value,key))clean[key]=value[key];
  return freshState(clean,parts,measures);
 }
-async function initializeLibrary(){try{library=await listScores();refreshLibrary();const id=localStorage.getItem('piano-active-score');if(id&&id!==BUILTIN)activateScore(id);}catch{$('libraryStatus').textContent='Browser storage is unavailable. The built-in piece still works; imported scores require browser storage.';}}
+async function initializeLibrary(){try{library=(await listScores()).map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename)};}catch{return entry;}});refreshLibrary();const id=localStorage.getItem('piano-active-score');if(id&&id!==BUILTIN)activateScore(id);}catch{$('libraryStatus').textContent='Browser storage is unavailable. The built-in piece still works; imported scores require browser storage.';}}
 initializeLibrary();
 
 
