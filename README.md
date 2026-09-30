@@ -13,6 +13,7 @@ Start timer (or playback) measures active practice. Rating pauses the timer; Nex
 ## Library and four practice stages
 
 - The library sidebar lists saved pieces and their last practice stage. Select a piece to restore its stage, section, hand, tempo, targets, and progress. On phones the library appears above the workspace.
+- Remove an imported piece and its practice progress with **Remove this piece**. Download a backup first to retain a recoverable copy.
 - Import one or several `.musicxml`, `.xml`, or compressed `.mxl` files. Source MusicXML is stored locally in IndexedDB and can be downloaded again. Identical source files reuse their existing entry.
 - Learn each hand, combine hands, polish, then use the fourth **Whole piece** tab for a complete play-through. The fourth tab retains playback, pause, seek, count-in, loop, MIDI practice, note navigation, and audio export.
 - Each stage has its own round counter and saved section/hand. Tab, hand, and section navigation does not add rounds. Rate an attempt once to complete a round, then choose Next practice round. Reloading or switching tabs cannot rate the same round again.
@@ -24,7 +25,7 @@ Storage belongs to this browser and site origin. It does not synchronize automat
 
 ## MusicXML support
 
-Export one concert-pitch piano part with one or two staves, standard treble/bass clefs, and a constant numeric meter. Import retains pitches, durations, accidentals, chords, multiple overlapping voices, ties, and supplied fingerings. Overlapping voices are represented as tied chord slices in the practice notation, so engraving differs from the source. The note guide retains fingering text; standard finger numbers 1 through 5 also appear above the notes.
+Select the concert-pitch piano part when importing a multi-part MusicXML score. The choice persists across reloads and library backups. Use a piano part with one or two staves, standard treble/bass clefs, and a constant numeric meter. Import retains pitches, durations, accidentals, chords, multiple overlapping voices, ties, and supplied fingerings. Overlapping voices are represented as tied chord slices in the practice notation, so engraving differs from the source. The note guide retains fingering text; standard finger numbers 1 through 5 also appear above the notes.
 
 Expand repeats and jumps before export. Grace notes, changing meters, transposing parts, percussion, and overlapping unisons are rejected with an explanation. Short measures including pickups are padded with rests. Practice notation uses the opening clefs, preserves key signatures, and prints accidentals only when needed. Saved imports are refreshed from their stored source when the library opens, without changing practice progress. Expressive dynamics, pedal, ornaments, articulations, and tempo changes are not reproduced; consult the original source for those markings. Playback tempo is quarter-note BPM, with meter-appropriate count-in subdivisions.
 

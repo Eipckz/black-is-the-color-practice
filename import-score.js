@@ -3,17 +3,22 @@ const text=(node,selector,fallback='')=>node.querySelector(selector)?.textConten
 const number=(node,selector,fallback)=>Number(text(node,selector,String(fallback)));
 const children=(node,name)=>Array.from(node.children).filter(n=>n.localName===name);
 const fail=message=>{throw new Error(message);};
-export function parseMusicXML(source, filename='Imported score', Parser=DOMParser){
+export function parseMusicXML(source, filename='Imported score', Parser=DOMParser, partId=null){
   if(source.length>8000000)fail('Choose a MusicXML file smaller than 8 MB.');
   if(/<!ENTITY/i.test(source))fail('XML entities are not supported. Export a fresh MusicXML file.');
+  if(/^MThd/.test(source))fail('This is a MIDI file. MIDI score import is not supported yet. Export MusicXML from your notation app instead.');
   const doc=new Parser().parseFromString(source,'application/xml');
   if(doc.querySelector('parsererror')||doc.documentElement.localName!=='score-partwise')fail('Choose a partwise MusicXML file exported by your notation app.');
   const parts=children(doc.documentElement,'part');
-  if(parts.length!==1)fail('Export just the piano part as MusicXML, with its right and left staves in one part.');
+  if(!parts.length)fail('This MusicXML contains no parts.');
+  if(parts.length>1&&!partId){const error=new Error('Choose the piano part to import.');error.parts=parts.map((part,i)=>({id:part.getAttribute('id'),name:text(Array.from(doc.querySelectorAll('score-part')).find(n=>n.getAttribute('id')===part.getAttribute('id'))||part,'part-name','Part '+(i+1))}));throw error;}
+  const selected=partId?parts.find(p=>p.getAttribute('id')===partId):parts[0];
+  if(!selected)fail('The selected piano part is missing from this score.');
+  for(const part of parts)if(part!==selected)part.remove();
   if(doc.querySelector('transpose, unpitched'))fail('Import a concert-pitch piano part without percussion or transposition.');
   if(doc.querySelector('grace'))fail('Grace notes need a measured realization. Export a practice copy with their written durations.');
   if(doc.querySelector('repeat, ending')||Array.from(doc.querySelectorAll('sound')).some(n=>['dacapo','dalsegno','tocoda','fine'].some(a=>n.hasAttribute(a))))fail('Expand repeats and jumps in your notation app before importing, so each practice measure has one playback position.');
-  const measures=children(parts[0],'measure');
+  const measures=children(selected,'measure');
   if(!measures.length||measures.length>500)fail('Import between 1 and 500 measures at a time.');
   let divisions=1,meter=null,beats=4,beatType=4,key=0,tempo=80;
   const measureKeys=[];
@@ -36,7 +41,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
       if(element.localName!=='note')continue;
       const duration=number(element,'duration',0)/divisions;if(!(duration>0))fail('Every note needs a positive duration. Export a measured practice copy.');
       const chord=!!element.querySelector('chord'),start=chord?previous:cursor;if(start===null)fail('A chord is missing its first note.');
-      if(start+duration>length+.00001)fail('A measure exceeds its time signature. Export complete, regular measures.');
+      if(start+duration>length+.00001)fail(`Measure ${measure.getAttribute('number')||index+1}, staff ${number(element,'staff',1)} exceeds ${beats}/${beatType} at beat ${start+duration}. Correct this measure in your notation app and export again.`);
       const staff=number(element,'staff',1);if(![1,2].includes(staff))fail('Export a piano part with at most two staves.');
       if(!element.querySelector('rest')){
         const step=text(element,'pitch step'),octave=number(element,'pitch octave',NaN),alter=number(element,'pitch alter',0);
@@ -52,7 +57,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   if(!raw.right.length&&!raw.left.length)fail('The score contains no playable piano notes.');
   const beatsPerMeasure=beats*4/beatType;
   const voices=Object.entries(raw).map(([id,notes])=>({id,events:segmentNotes(notes,measures.length,beatsPerMeasure)}));
-  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',beatsPerMeasure,clefs,measureKeys,voices,warnings:[...warnings],imported:true};
+  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',beatsPerMeasure,clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
 }
 // Split overlapping voices into chord slices, retaining per-note ties and fingerings.
 export function segmentNotes(notes,measures,length){

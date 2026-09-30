@@ -36,3 +36,13 @@ test('accidental state remains independent for the two staves',()=>{
   assert.doesNotMatch(abc.split('K:C\n')[1],/=[A-Ga-g]/);
   assert.equal((abc.match(/\^F/g)||[]).length,2,'each staff prints its own sharp and a sustained sharp is not printed again on its tied slices');
 });
+
+test('multi-part import requests a named selection and ignores unsupported other parts',()=>{
+ const doc=new DOMParser().parseFromString(xml,'application/xml');const original=doc.querySelector('part');original.setAttribute('id','piano');const other=doc.createElement('part');other.setAttribute('id','voice');other.innerHTML='<measure><note><grace/></note></measure>';doc.documentElement.append(other);const source=doc.toString();
+ assert.throws(()=>parse(source),error=>error.parts.length===2&&error.parts[0].id==='piano');
+ const selected=parseMusicXML(source,'test.xml',DOMParser,'piano');assert.equal(selected.measures,2);assert.equal(selected.partId,'piano');assert.throws(()=>parseMusicXML(source,'test.xml',DOMParser,'missing'),/missing/);
+});
+test('MIDI and overfull bars give specific actionable errors',()=>{
+ assert.throws(()=>parse('MThd0000'),/MIDI/);
+ assert.throws(()=>parse(xml.replace('<duration>12</duration>','<duration>16</duration>')),/Measure/);
+});

@@ -4,8 +4,8 @@ import {makeCues,cueState,stepBeat,alteredNoteHeads} from './follower.js?v=10';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js?v=8';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=8';
-import {BUILTIN,progressKey,scoreId,listScores,storeScore} from './library.js';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=11';
+import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore} from './library.js?v=11';
 let score=builtinScore, activeId=BUILTIN, library=[], beatsPerMeasure=4, pulse=1, pulsesPerMeasure=4;
 import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress} from './engine.js?v=5';
 const $=id=>document.getElementById(id);
@@ -113,7 +113,7 @@ function fillSelectors(){
  $('scoreNotes').textContent=score.imported?'Imported piano score. Printed fingerings are retained where supplied. Playback counts quarter-note beats.':'Both accompaniment staves use bass clef. Middle C = C4. The top melody is a separate part.';
  $('melody').checked=false;$('melody').parentElement.hidden=!!score.imported;
  document.querySelectorAll('a[href^="Black-Is-the-Color"]').forEach(a=>a.hidden=!!score.imported);
- $('libraryWarnings').textContent=(score.warnings||[]).join(' ');$('downloadScore').hidden=!score.imported;
+ $('libraryWarnings').textContent=(score.warnings||[]).join(' ');$('downloadScore').hidden=!score.imported;$('removeScore').hidden=!score.imported;
 }
 fillSelectors();
 $('section').onchange=()=>{state.section=Number($('section').value);render();};$('hand').onchange=()=>{state.hand=$('hand').value;render();};$('tempo').oninput=()=>{$('bpmLabel').textContent=$('tempo').value+' BPM';};$('tempo').onchange=()=>{const was=playing,practice=transport?.practice,at=positionBeat;stopAudio(false);state.tempo=Number($('tempo').value);updatePosition(at);save();if(was)play(practice,at,true);};
@@ -199,12 +199,12 @@ function activateScore(id){const entry=library.find(e=>e.id===id);if(id!==BUILTI
 $('scoreLibrary').onchange=()=>activateScore($('scoreLibrary').value);
 $('addScores').onclick=()=>$('scoreFiles').click();
 $('scoreFiles').onchange=async event=>{const files=[...event.target.files];if(!files.length)return;$('addScores').disabled=true;$('scoreLibrary').disabled=true;const results=[];let last=null;
- try{for(const file of files){try{const source=await readMusicXMLFile(file),parsed=parseMusicXML(source,file.name),id=await scoreId(source);if(library.some(e=>e.id===id)){results.push(file.name+': already in your library; progress kept.');last=id;continue;}const entry={id,source,filename:file.name,score:parsed};await storeScore(entry);library.push(entry);last=id;results.push(file.name+': imported '+parsed.measures+' measures.');}catch(error){results.push(file.name+': '+error.message);}}if(last)activateScore(last);$('libraryStatus').textContent=results.join('\n');}finally{$('addScores').disabled=false;$('scoreLibrary').disabled=false;event.target.value='';}
+ try{for(const file of files){try{const source=await readMusicXMLFile(file);let parsed,partId=null;try{parsed=parseMusicXML(source,file.name);}catch(error){if(!error.parts)throw error;partId=await choosePianoPart(error.parts,file.name);if(!partId){results.push(file.name+': import cancelled.');continue;}parsed=parseMusicXML(source,file.name,DOMParser,partId);}const id=await scoreId(partId?source+'\nPiano part: '+partId:source);if(library.some(e=>e.id===id)){results.push(file.name+': already in your library; progress kept.');last=id;continue;}const entry={id,source,filename:file.name,partId,score:parsed};await storeScore(entry);library.push(entry);last=id;results.push(file.name+': imported '+parsed.measures+' measures.');}catch(error){results.push(file.name+': '+error.message);}}if(last)activateScore(last);$('libraryStatus').textContent=results.join('\n');}finally{$('addScores').disabled=false;$('scoreLibrary').disabled=false;event.target.value='';}
 };
 async function restoreBackup(event){const file=event.target.files?.[0];if(!file)return;try{
  if(file.size>50000000)throw new Error('This backup exceeds 50 MB.');const data=JSON.parse(await file.text());
  if(data.version===2){if(!Array.isArray(data.entries)||data.entries.length>100||!data.progress||typeof data.progress!=='object')throw new Error('Invalid library backup.');const validated=[];
-   for(const entry of data.entries){if(typeof entry.source!=='string'||typeof entry.filename!=='string')throw new Error('Invalid score entry.');const id=await scoreId(entry.source);if(id!==entry.id)throw new Error('A score in this backup does not match its identity.');validated.push({...entry,id,score:parseMusicXML(entry.source,entry.filename)});}
+   for(const entry of data.entries){if(typeof entry.source!=='string'||typeof entry.filename!=='string')throw new Error('Invalid score entry.');const id=await scoreId(entry.partId?entry.source+'\nPiano part: '+entry.partId:entry.source);if(id!==entry.id)throw new Error('A score in this backup does not match its identity.');validated.push({...entry,id,score:parseMusicXML(entry.source,entry.filename,DOMParser,entry.partId||null)});}
    // Validate every state before writing anything.
    const states=[];for(const [id,incoming] of Object.entries(data.progress)){const entry=validated.find(e=>e.id===id)||library.find(e=>e.id===id);if(id!==BUILTIN&&!entry)throw new Error('Backup refers to an unknown score.');const piece=id===BUILTIN?builtinScore:entry.score;const parts=id===BUILTIN?builtinSections:makeSections(piece.measures);states.push([id,checkedState(incoming,parts,piece.measures)]);}
    for(const entry of validated){await storeScore(entry);if(!library.some(e=>e.id===entry.id))library.push(entry);}
@@ -220,7 +220,7 @@ function checkedState(value,parts,measures){
  const clean={records};for(const key of ['phase','hand','section','stages','targets','tempo','customStart','customEnd','volume','leftVolume','rightVolume','countBars','scoreSize','highlightMode','previewNext','showCueGuide','autoFollow','practiceTiming'])if(Object.hasOwn(value,key))clean[key]=value[key];
  const result=freshState(clean,parts,measures);result.practiceTiming=timingState(clean.practiceTiming);return result;
 }
-async function initializeLibrary(){try{library=(await listScores()).map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename)};}catch{return entry;}});refreshLibrary();const id=localStorage.getItem('piano-active-score');if(id&&id!==BUILTIN)activateScore(id);}catch{$('libraryStatus').textContent='Browser storage is unavailable. The built-in piece still works; imported scores require browser storage.';}}
+async function initializeLibrary(){try{library=(await listScores()).map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename,DOMParser,entry.partId||null)};}catch{return entry;}});refreshLibrary();const id=localStorage.getItem('piano-active-score');if(id&&id!==BUILTIN)activateScore(id);}catch{$('libraryStatus').textContent='Browser storage is unavailable. The built-in piece still works; imported scores require browser storage.';}}
 initializeLibrary();
 
 
@@ -248,3 +248,8 @@ setInterval(()=>{const now=Date.now(),elapsed=Math.min(2,(now-timerLast)/1000);t
 document.addEventListener('visibilitychange',()=>{if(document.hidden){state.practiceTiming.running=false;save();}timerLast=Date.now();renderEstimate();});
 window.addEventListener('pagehide',()=>{state.practiceTiming.running=false;save();});
 renderEstimate();
+
+function choosePianoPart(parts,filename){
+ return new Promise(resolve=>{const dialog=$('pianoPartDialog'),select=$('pianoPart');select.replaceChildren();for(const part of parts)select.append(new Option(part.name+' ('+part.id+')',part.id));$('pianoPartFile').textContent=filename;dialog.returnValue='cancel';dialog.onclose=()=>resolve(dialog.returnValue==='import'?select.value:null);dialog.showModal();});
+}
+$('removeScore').onclick=async()=>{const entry=library.find(e=>e.id===activeId);if(!entry)return;if(!confirm('Remove '+entry.score.title+' and its practice progress from this browser? Download a backup first if you want to keep it.'))return;try{await deleteScore(entry.id);activateScore(BUILTIN);library=library.filter(e=>e.id!==entry.id);localStorage.removeItem(progressKey(entry.id));refreshLibrary();$('libraryStatus').textContent=entry.score.title+' removed.';}catch(error){$('libraryStatus').textContent='Removal failed: '+error.message;}};
