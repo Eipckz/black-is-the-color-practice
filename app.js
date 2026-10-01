@@ -4,7 +4,7 @@ import {makeCues,cueState,stepBeat,alteredNoteHeads} from './follower.js?v=10';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js?v=8';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=11';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=12';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore} from './library.js?v=11';
 let score=builtinScore, activeId=BUILTIN, library=[], beatsPerMeasure=4, pulse=1, pulsesPerMeasure=4;
 import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress} from './engine.js?v=5';

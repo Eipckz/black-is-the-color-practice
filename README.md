@@ -25,6 +25,8 @@ Storage belongs to this browser and site origin. It does not synchronize automat
 
 ## MusicXML support
 
+Equal-note triplets display their written note values, beaming, and 3 markings. This also fixes previously saved imports without re-importing; playback timing remains unchanged.
+
 Select the concert-pitch piano part when importing a multi-part MusicXML score. The choice persists across reloads and library backups. Use a piano part with one or two staves, standard treble/bass clefs, and a constant numeric meter. Import retains pitches, durations, accidentals, chords, multiple overlapping voices, ties, and supplied fingerings. Overlapping voices are represented as tied chord slices in the practice notation, so engraving differs from the source. The note guide retains fingering text; standard finger numbers 1 through 5 also appear above the notes.
 
 Expand repeats and jumps before export. Grace notes, changing meters, transposing parts, percussion, and overlapping unisons are rejected with an explanation. Short measures including pickups are padded with rests. Practice notation uses the opening clefs, preserves key signatures, and prints accidentals only when needed. Saved imports are refreshed from their stored source when the library opens, without changing practice progress. Expressive dynamics, pedal, ornaments, articulations, and tempo changes are not reproduced; consult the original source for those markings. Playback tempo is quarter-note BPM, with meter-appropriate count-in subdivisions.

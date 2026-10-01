@@ -76,6 +76,15 @@ export function segmentNotes(notes,measures,length){
 const fraction=value=>{let denominator=1;while(denominator<100000&&Math.abs(value*denominator-Math.round(value*denominator))>1e-5)denominator++;return `${Math.round(value*denominator)}/${denominator}`;};
 const keyNames=['Cb','Gb','Db','Ab','Eb','Bb','F','C','G','D','A','E','B','F#','C#'];
 const keyAlter=(step,fifths)=>((fifths>0?'FCGDAEB':'BEADGCF').slice(0,Math.abs(fifths)).includes(step)?Math.sign(fifths):0);
+// Playback durations alone do not tell abcjs to engrave a tuplet. Recognize
+// complete equal-note triplets, including in scores saved before this fix.
+function tripletLength(events,index){
+  const group=events.slice(index,index+3);if(group.length!==3)return null;
+  const written=events[index].duration*3/2;
+  const length=[1/16,1/8,1/4,1/2,1,2,4,8,16].find(n=>Math.abs(n-written)<1e-6);
+  if(!length||!group.every((e,i)=>Math.abs(e.duration-length*2/3)<1e-6&&(!i||Math.abs(e.beat-group[i-1].beat-group[i-1].duration)<1e-6)))return null;
+  return length;
+}
 export function importedExcerpt(score,hand,start,end,large=false){
   const ids=hand==='both'?['right','left']:[hand];
   let abc=`X:1\nT:Measures ${start}-${end}\nM:${score.meter}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${large?1:2}\n%%staffwidth ${large?300:540}\n%%stretchlast 1\n`;
@@ -86,11 +95,17 @@ export function importedExcerpt(score,hand,start,end,large=false){
     for(let m=start;m<=end;m++){
       const fifths=score.measureKeys?.[m-1]??0,accidentals=new Map();
       if(m>start&&fifths!==(score.measureKeys?.[m-2]??0))abc+='[K:'+keyNames[fifths+7]+'] ';
-      for(const e of events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m)){
-        if(!e.notes.length){abc+='z'+fraction(e.duration)+' ';continue;}
+      const inBar=events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m);
+      let tripletRemaining=0,writtenLength=null;
+      for(let i=0;i<inBar.length;i++){
+        const e=inBar[i];
+        if(!tripletRemaining){writtenLength=tripletLength(inBar,i);if(writtenLength){abc+='(3:2:3';tripletRemaining=3;}}
+        const duration=writtenLength??e.duration;
+        const separator=tripletRemaining&&--tripletRemaining?'':' ';
+        if(!e.notes.length){abc+='z'+fraction(duration)+separator;continue;}
         const tokens=e.notes.map((n,i)=>{const p=e.spellings[i];let pitch=p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave));const previous=accidentals.get(pitch)??keyAlter(p.step,fifths);const accidental=p.alter===previous?'':p.alter>0?'^'.repeat(p.alter):p.alter<0?'_'.repeat(-p.alter):'=';accidentals.set(pitch,p.alter);return accidental+pitch+(e.tieStarts.includes(n)?'-':'');});
         const fingering=e.fingers.filter(f=>/^[1-5]$/.test(f)).map(f=>'!'+f+'!').join('');
-        abc+=fingering+(tokens.length>1?'['+tokens.join('')+']':tokens[0].replace(/-$/,''))+fraction(e.duration)+(tokens.length===1&&tokens[0].endsWith('-')?'-':'')+' ';
+        abc+=fingering+(tokens.length>1?'['+tokens.join('')+']':tokens[0].replace(/-$/,''))+fraction(duration)+(tokens.length===1&&tokens[0].endsWith('-')?'-':'')+separator;
       }abc+='| ';
     }abc+='\n';
   }return abc;
