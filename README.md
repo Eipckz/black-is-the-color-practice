@@ -25,7 +25,7 @@ Storage belongs to this browser and site origin. It does not synchronize automat
 
 ## MusicXML support
 
-Equal-note triplets display their written note values, beaming, and 3 markings. This also fixes previously saved imports without re-importing; playback timing remains unchanged.
+Imported eighths and sixteenths are beamed by beat (in groups of three eighths in 6/8, 9/8 and 12/8); rests and longer notes break beams. Equal-note triplets display their written note values, beaming, and 3 markings. This also fixes previously saved imports without re-importing; playback timing remains unchanged.
 
 Select the concert-pitch piano part when importing a multi-part MusicXML score. The choice persists across reloads and library backups. Use a piano part with one or two staves, standard treble/bass clefs, and a constant numeric meter. Import retains pitches, durations, accidentals, chords, multiple overlapping voices, ties, and supplied fingerings. Overlapping voices are represented as tied chord slices in the practice notation, so engraving differs from the source. The note guide retains fingering text; standard finger numbers 1 through 5 also appear above the notes.
 

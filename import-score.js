@@ -86,7 +86,7 @@ function tripletLength(events,index){
   return length;
 }
 export function importedExcerpt(score,hand,start,end,large=false){
-  const ids=hand==='both'?['right','left']:[hand];
+  const ids=hand==='both'?['right','left']:[hand],[beats,beatType]=score.meter.split('/').map(Number),group=beatType===8&&beats%3===0?1.5:1;
   let abc=`X:1\nT:Measures ${start}-${end}\nM:${score.meter}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${large?1:2}\n%%staffwidth ${large?300:540}\n%%stretchlast 1\n`;
   for(const id of ids)abc+=`V:${id} clef=${score.clefs[id]} name="${id==='right'?'RH':'LH'}"\n`;
   const openingKey=score.measureKeys?.[start-1]??0;
@@ -95,13 +95,15 @@ export function importedExcerpt(score,hand,start,end,large=false){
     for(let m=start;m<=end;m++){
       const fifths=score.measureKeys?.[m-1]??0,accidentals=new Map();
       if(m>start&&fifths!==(score.measureKeys?.[m-2]??0))abc+='[K:'+keyNames[fifths+7]+'] ';
-      const inBar=events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m);
+      const inBar=events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m),barStart=(m-1)*score.beatsPerMeasure;
       let tripletRemaining=0,writtenLength=null;
       for(let i=0;i<inBar.length;i++){
         const e=inBar[i];
         if(!tripletRemaining){writtenLength=tripletLength(inBar,i);if(writtenLength){abc+='(3:2:3';tripletRemaining=3;}}
         const duration=writtenLength??e.duration;
-        const separator=tripletRemaining&&--tripletRemaining?'':' ';
+        // A space breaks the beam: beam contiguous notes shorter than a quarter within one beat group.
+        const n=inBar[i+1],beamed=!tripletRemaining&&n&&e.notes.length&&n.notes.length&&duration<1&&(tripletLength(inBar,i+1)??n.duration)<1&&Math.abs(n.beat-e.beat-e.duration)<1e-6&&Math.floor((e.beat-barStart+1e-6)/group)===Math.floor((n.beat-barStart+1e-6)/group);
+        const separator=tripletRemaining&&--tripletRemaining||beamed?'':' ';
         if(!e.notes.length){abc+='z'+fraction(duration)+separator;continue;}
         const tokens=e.notes.map((n,i)=>{const p=e.spellings[i];let pitch=p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave));const previous=accidentals.get(pitch)??keyAlter(p.step,fifths);const accidental=p.alter===previous?'':p.alter>0?'^'.repeat(p.alter):p.alter<0?'_'.repeat(-p.alter):'=';accidentals.set(pitch,p.alter);return accidental+pitch+(e.tieStarts.includes(n)?'-':'');});
         const fingering=e.fingers.filter(f=>/^[1-5]$/.test(f)).map(f=>'!'+f+'!').join('');
