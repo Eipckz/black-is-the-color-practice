@@ -17,3 +17,18 @@ export function estimatePractice(state){
   return {ready:true,remaining,seconds,low:Math.round(seconds*.75),high:Math.round(seconds*1.5),samples:samples.length};
 }
 export function timeText(seconds){seconds=Math.max(0,Math.round(seconds));const h=Math.floor(seconds/3600),m=Math.floor(seconds%3600/60),s=seconds%60;return (h?h+'h ':'')+m+'m '+String(s).padStart(2,'0')+'s';}
+// Practice minutes per local calendar day, shared by every piece on this device. Keeps 60 days.
+const isDay=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
+export function dailyState(value={}){
+  if(!value||typeof value!=='object')value={};
+  const goal=Number.isInteger(value.goal)&&value.goal>=0&&value.goal<=600?value.goal:0;
+  const days=Object.fromEntries(Object.entries(value.days&&typeof value.days==='object'?value.days:{}).filter(([d,s])=>isDay(d)&&Number.isFinite(s)&&s>=0).sort().slice(-60));
+  return {goal,days};
+}
+export function addPractice(daily,day,seconds){
+  daily.days[day]=(daily.days[day]||0)+seconds;
+  const keep=Object.keys(daily.days).sort().slice(-60);
+  if(keep.length<Object.keys(daily.days).length)daily.days=Object.fromEntries(keep.map(d=>[d,daily.days[d]]));
+  return daily;
+}
+export function mergeDaily(a,b){const out=dailyState(a),other=dailyState(b);for(const [d,s] of Object.entries(other.days))out.days[d]=Math.max(out.days[d]||0,s);if(!out.goal)out.goal=other.goal;return dailyState(out);}

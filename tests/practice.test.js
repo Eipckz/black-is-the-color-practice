@@ -45,3 +45,35 @@ test('a single passage alternates hands and single-hand practice remains usable'
   switchStage(s,'mix');
   assert.deepEqual(chooseLesson(s,parts,1),{section:0,hand:'both'});
 });
+
+test('section size makes 1-, 2- and 4-measure passages with their own record keys',async()=>{
+  const {recordKey}=await import('../practice.js');
+  assert.deepEqual(makeSections(5,1).slice(0,5).map(s=>[s.start,s.end]),[[1,1],[2,2],[3,3],[4,4],[5,5]]);
+  assert.equal(makeSections(5,1)[0].name,'Measure 1');
+  assert.deepEqual(makeSections(10,4).slice(0,3).map(s=>[s.start,s.end]),[[1,4],[5,8],[9,10]]);
+  assert.deepEqual(makeSections(10,4)[3],{...makeSections(10,4)[3],start:4,end:8});
+  const s=freshState({sectionSize:4},makeSections(10,4),10);
+  assert.equal(recordKey(s,1,'left'),'4/1:left');assert.equal(recordKey(freshState({},sections,12),1,'left'),'1:left');
+  assert.equal(s.targets.learn,12);
+  assert.equal(freshState({sectionSize:3},sections,12).sectionSize,2);
+  for(const n of [1,4,9]){const parts=makeSections(n,4),st=freshState({sectionSize:4},parts,n);for(const phase of ['learn','mix','polish']){switchStage(st,phase);const next=chooseLesson(st,parts,n);assert.ok(parts[next.section]&&parts[next.section].end<=n);}}
+});
+test('interleaving strength chooses jumping, neighbouring or in-order passages on ties',()=>{
+  const parts=makeSections(30),pick=interleave=>{const s=freshState({phase:'mix',interleave},parts,30);s.section=5;return chooseLesson(s,parts,30).section;};
+  assert.equal(pick('jump'),12);assert.equal(pick('near'),4);assert.equal(pick('order'),6);
+  assert.equal(freshState({interleave:'random'},parts,30).interleave,'jump');
+});
+test('learn order sets the starting hand and strict alternation always switches hands',()=>{
+  const parts=makeSections(12);
+  assert.equal(freshState({learnOrder:'right'},parts,12).hand,'right');assert.equal(freshState({},parts,12).hand,'left');
+  const s=freshState({learnOrder:'alternate'},parts,12);
+  s.records={'1:right':{attempts:9,clean:9},'2:right':{attempts:9,clean:9}};for(let i=3;i<6;i++)s.records[i+':right']={attempts:9,clean:9};s.records['0:right']={attempts:9,clean:9};
+  s.hand='left';assert.equal(chooseLesson(s,parts,12).hand,'right','switches even though every right-hand passage is stronger');
+  s.learnOrder='left';assert.equal(chooseLesson(s,parts,12).hand,'left');
+});
+test('tempo ladder and notes settings are validated',()=>{
+  const s=freshState({tempoStep:7,autoSlow:false,notes:{'0:left':'x'.repeat(3000),'bad key':'y','1:both':42,'4/2:right':'Keep wrist loose'}},sections,12);
+  assert.equal(s.tempoStep,5);assert.equal(s.autoSlow,false);
+  assert.deepEqual(Object.keys(s.notes),['0:left','4/2:right']);assert.equal(s.notes['0:left'].length,2000);
+  assert.equal(freshState({},sections,12).autoSlow,true);
+});

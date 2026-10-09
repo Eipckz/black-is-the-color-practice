@@ -70,3 +70,7 @@ body,.card{background:#fff!important;border:0!important;box-shadow:none!importan
 #notation .is-current,#notation .is-current *{fill:#000!important;stroke:#000!important}
 #notation .is-next{outline:0!important}
 }
+.section-notes{display:block;font-size:13px;font-weight:600;margin:12px 0}
+.section-notes textarea{display:block;width:100%;margin-top:6px;padding:10px;font:inherit;font-weight:400;border:1px solid var(--line);border-radius:6px;background:var(--white);color:var(--ink);resize:vertical}
+.mixer input[type=number]{display:block;width:100%;min-height:44px;margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--white);color:var(--ink)}
+#dailyTotal{color:var(--muted);font-size:10px}

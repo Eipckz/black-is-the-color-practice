@@ -20,6 +20,12 @@ Choose your own right- and left-hand highlight colours (Reset restores orange an
 
 Loop plays a section twice, four times, or until stopped. The metronome can click each beat or each eighth note. Hear LH only, RH only, or Both hands sets the two hand sliders in one tap. Keyboard shortcuts: Space play/pause, ← → previous/next notes, L loop, M metronome, 1 2 3 rate the round, N next round. They are ignored while a form control has focus.
 
+## Shaping your practice
+
+For imported pieces choose 1-, 2- or 4-measure sections. Each size keeps its own practice records, so switching sizes never rewrites earlier rounds; the plan panel shows the active size. The built-in piece keeps its hand-written sections. Separate-hands rounds can start with the left or right hand, or always alternate hands. Interleaving can jump across the piece (default), stay with neighbouring passages, or go in order; weaker material still comes first. Choose the tempo step (2, 5 or 10 BPM) suggested after two clean returns, and whether Needs a slow retry slows the tempo automatically.
+
+Set a daily practice goal in minutes. The timer adds active practice to today's total for all pieces on this device (60 days are kept, and included in backups). Write your own notes for each section and hand, up to 2,000 characters; they are saved with the piece's progress and backups.
+
 ## Library and four practice stages
 
 - The library sidebar lists saved pieces and their last practice stage. Select a piece to restore its stage, section, hand, tempo, targets, and progress. On phones the library appears above the workspace.
