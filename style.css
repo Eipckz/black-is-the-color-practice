@@ -89,3 +89,36 @@ body,.card{background:#fff!important;border:0!important;box-shadow:none!importan
 [data-score-height=tall] #scoreWrap{max-height:75dvh;overflow:auto;overscroll-behavior:contain}
 #scoreWrap{scroll-padding-top:24px}
 html{scroll-padding-top:120px}
+/* Settings dialog, generated from settings.js */
+.settings-dialog{width:min(880px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:0;border:1px solid var(--line);border-radius:14px;background:var(--white);color:var(--ink)}
+.settings-dialog::backdrop{background:#0008}
+.settings-form{display:flex;flex-direction:column;max-height:calc(100dvh - 26px)}
+.settings-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line)}
+.settings-head h2{margin:0;font-size:24px}
+.settings-head button{border:0;font-size:18px}
+.settings-body{display:grid;grid-template-columns:190px minmax(0,1fr);min-height:0;flex:1;overflow:hidden}
+.settings-tabs{display:flex;flex-direction:column;gap:4px;padding:12px;border-right:1px solid var(--line);overflow:auto}
+.settings-tabs button{text-align:left;border:0;font-size:14px}
+.settings-tabs button[aria-selected=true]{background:var(--green);color:#fff}
+#settingsPanels{overflow:auto;padding:16px 20px}
+.settings-panel{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px 20px;align-items:start}
+.setting{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:14px;font-weight:600}
+.setting select,.setting input[type=number],.setting input[type=range],.setting input[type=color]{grid-column:1/-1;margin:0}
+.setting input[type=number]{min-height:44px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--white);color:var(--ink)}
+.setting input[type=color]{width:100%;height:40px;padding:2px;border:1px solid var(--line);border-radius:6px;background:var(--white)}
+.setting-check{grid-template-columns:auto 1fr auto;font-weight:400}
+.setting-check input{width:20px;height:20px;accent-color:var(--green)}
+.setting output{font-weight:400;color:var(--muted)}
+.scope{font-size:10px;font-weight:400;color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:1px 7px;white-space:nowrap}
+.setting-help{grid-column:1/-1;color:var(--muted);font-size:12px;font-weight:400}
+.settings-panel>.wide{grid-column:1/-1}
+.key-row{grid-template-columns:1fr auto}
+.key-row button{min-width:110px;font-variant-numeric:tabular-nums}
+.settings-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)}
+.settings-foot label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.settings-foot select{width:auto}
+#settingsStatus{flex:1;font-size:12px;color:var(--muted);min-width:140px}
+.header-actions #openSettings{white-space:nowrap}
+[data-ui-scale=small] body{zoom:.9}
+[data-ui-scale=large] body{zoom:1.15}
+@media(max-width:640px){.settings-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.settings-tabs{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.settings-tabs button{white-space:nowrap}.settings-panel{grid-template-columns:1fr}}

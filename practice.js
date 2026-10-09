@@ -1,3 +1,4 @@
+import {defaults,validate} from './settings.js?v=1';
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {
   const sections = [];
@@ -11,11 +12,13 @@ export function makeSections(measures, size=2) {
 // Records and notes for 2-measure sections keep their original keys; other section sizes get their own key space.
 export const recordKey=(state,section,hand)=>(state.sectionSize&&state.sectionSize!==2?state.sectionSize+'/':'')+section+':'+hand;
 export const recordKeyPattern=/^(?:[14]\/)?\d+:(left|right|both)$/;
-export function freshState(saved={}, sections, measures) {
-  const phase=phases.includes(saved.phase)?saved.phase:'learn';
-  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,metronomeSub:'beat',scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',outlineNext:false,scoreView:'piece',pageMeasures:8,followSection:true,scoreHeight:'auto',barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,sectionSize:2,learnOrder:'left',interleave:'jump',tempoStep:5,autoSlow:true,records:{},...saved,phase};
-  if(![1,2,4].includes(state.sectionSize))state.sectionSize=2;
-  if(!['left','right','alternate'].includes(state.learnOrder))state.learnOrder='left';
+// pieceDefaults: values chosen with "Apply to all pieces", used for keys this piece never stored.
+export function freshState(saved={}, sections, measures, pieceDefaults={}) {
+  const phase=phases.includes(saved.phase)?saved.phase:'learn',base=defaults('piece');
+  for(const key of Object.keys(base))base[key]=validate(key,pieceDefaults[key],base[key]);
+  const state={...base,customStart:1,customEnd:Math.min(2,measures),records:{},...saved,phase};
+  for(const key of Object.keys(base))state[key]=validate(key,state[key],base[key]);
+  delete state.previewNext;
   state.stages={};
   for(const p of phases) {
     const old=saved.stages?.[p]||{};
@@ -30,22 +33,8 @@ export function freshState(saved={}, sections, measures) {
   const passages=Math.ceil(measures/state.sectionSize);
   state.targets={learn:passages*4,mix:passages*2,polish:(sections.length-1)*2,...saved.targets};
   for(const p of phases.slice(0,3))if(!Number.isInteger(state.targets[p])||state.targets[p]<1||state.targets[p]>10000)state.targets[p]=12;
-  state.tempo=Number.isFinite(state.tempo)?Math.max(30,Math.min(180,state.tempo)):50;
   for(const key of ['customStart','customEnd'])state[key]=Number.isInteger(state[key])?Math.max(1,Math.min(measures,state[key])):1;
   if(state.customStart>state.customEnd)state.customEnd=state.customStart;
-  for(const key of ['volume','leftVolume','rightVolume'])state[key]=Number.isFinite(state[key])?Math.max(0,Math.min(100,state[key])):75;
-  if(![0,1,2].includes(state.countBars))state.countBars=1;
-  if(!['beat','eighth'].includes(state.metronomeSub))state.metronomeSub='beat';
-  if(state.scoreView==='page')state.scoreView='around';
-  if(!['piece','around','section'].includes(state.scoreView))state.scoreView='piece';
-  if(!['auto','fit','half','tall'].includes(state.scoreHeight))state.scoreHeight='auto';
-  if(![4,8,12,16].includes(state.pageMeasures))state.pageMeasures=8;
-  if(!['auto',1,2,4].includes(state.barsPerLine))state.barsPerLine='auto';
-  state.contextDim=Number.isFinite(state.contextDim)?Math.max(0,Math.min(90,Math.round(state.contextDim))):65;
-  delete state.previewNext;state.outlineNext=state.outlineNext===true;
-  for(const key of ['showCueGuide','autoFollow','autoSlow','followSection'])state[key]=state[key]!==false;
-  if(!['jump','near','order'].includes(state.interleave))state.interleave='jump';
-  if(![2,5,10].includes(state.tempoStep))state.tempoStep=5;
   const notes=state.notes&&typeof state.notes==='object'&&!Array.isArray(state.notes)?state.notes:{};
   state.notes=Object.fromEntries(Object.entries(notes).filter(([k,v])=>recordKeyPattern.test(k)&&typeof v==='string'&&v).map(([k,v])=>[k,v.slice(0,2000)]));
   Object.assign(state,state.stages[phase]);
