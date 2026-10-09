@@ -13,3 +13,18 @@ test('daily practice totals accumulate per day, keep 60 days and merge backups b
   assert.deepEqual(mergeDaily({days:{'2026-10-09':10}},{goal:15,days:{'2026-10-09':40,'2026-10-10':5}}),{goal:15,days:{'2026-10-09':40,'2026-10-10':5}});
   assert.equal(dailyState({goal:9999}).goal,0);
 });
+import {validHistory,addHistory,historyByDay,historyCSV,updateAccuracy,HISTORY_LIMIT} from '../estimate.js';
+test('practice history is capped, validated, grouped by day and exported as CSV',()=>{
+  let h=[];for(let i=0;i<HISTORY_LIMIT+5;i++)h=addHistory(h,[1e12+i,0,1,0,2,50,30]);assert.equal(h.length,HISTORY_LIMIT);assert.equal(h[0][0],1e12+5);
+  assert.deepEqual(validHistory([[1,0,0,0,2,50,10],[1,9,0,0,2,50,10],'x',[1,0,0,0,5,50,10],[1,0,0,0,1,50]]),[[1,0,0,0,2,50,10]]);
+  const now=new Date(2026,9,9,12).getTime(),day=24*3600*1000;
+  const days=historyByDay([[now,0,0,0,2,50,120],[now-60000,1,2,2,0,48,60],[now-2*day,0,0,1,2,50,600],[now-40*day,0,0,0,2,50,99]],now);
+  assert.equal(days.length,30);assert.deepEqual(days.at(-1),{date:'2026-10-09',seconds:180,rounds:2,clean:1});assert.equal(days.at(-3).seconds,600);
+  const csv=historyCSV([[now,1,2,2,0,48,61.4]],i=>'Join "A"');
+  assert.equal(csv.split('\n')[0],'date,time,stage,section,hand,rating,tempo_bpm,seconds');assert.match(csv,/2026-10-09,\d\d:\d\d,mix,"Join ""A""",both,needs a slow retry,48,61/);
+});
+test('per-measure accuracy averages recent timed checks',()=>{
+  let s=updateAccuracy({},new Map([[3,{onTime:4,n:4,wrong:0}],[4,{onTime:1,n:3,wrong:1}]]),5);
+  assert.deepEqual(s,{3:{acc:1,n:1,t:5},4:{acc:.25,n:1,t:5}});
+  s=updateAccuracy(s,new Map([[3,{onTime:0,n:2,wrong:0}]]),6);assert.deepEqual(s[3],{acc:.5,n:2,t:6});assert.deepEqual(s[4],{acc:.25,n:1,t:5});
+});

@@ -41,14 +41,16 @@ export class MidiConnection {
 export function timingWindow(tempo,level='balanced'){const factors={relaxed:.35,balanced:.25,tighter:.15};return Math.max(.09,Math.min(.3,(60/tempo)*(factors[level]??.25)));}
 export class RhythmCheck {
  // pitchless: taps without pitch, matched to the nearest unmatched note start (one per chord).
- constructor(events,tempo,level,{pitchless=false}={}){this.window=timingWindow(tempo,level);this.seconds=60/tempo;this.pitchless=pitchless;this.expected=pitchless?[...new Set(events.filter(e=>attacksFor(e).length).map(e=>e.beat))].map(beat=>({note:null,time:beat*this.seconds,matched:false})):events.flatMap(e=>attacksFor(e).map(note=>({note,time:e.beat*this.seconds,matched:false})));this.first=Math.min(...this.expected.map(e=>e.time));this.wrong=0;this.stray=0;this.hits=[];}
+ constructor(events,tempo,level,{pitchless=false}={}){this.window=timingWindow(tempo,level);this.seconds=60/tempo;this.pitchless=pitchless;this.expected=pitchless?[...new Set(events.filter(e=>attacksFor(e).length).map(e=>e.beat))].map(beat=>({note:null,time:beat*this.seconds,matched:false})):events.flatMap(e=>attacksFor(e).map(note=>({note,time:e.beat*this.seconds,matched:false})));this.first=Math.min(...this.expected.map(e=>e.time));this.wrong=0;this.stray=0;this.hits=[];this.errors=[];}
  hit(note,time){
   // Keys pressed during the count-in are not early attempts at the first note.
   if(time<this.first-this.window)return {kind:'ignored',note};
   const candidates=this.expected.filter(e=>!e.matched&&(this.pitchless||e.note===note)&&Math.abs(e.time-time)<=Math.max(.65,this.window*2));
   candidates.sort((a,b)=>Math.abs(a.time-time)-Math.abs(b.time-time));const target=candidates[0];
-  if(!target){if(!this.pitchless&&this.expected.some(e=>Math.abs(e.time-time)<=this.window))this.wrong++;else this.stray++;return {kind:'extra',note};}
-  target.matched=true;const delta=time-target.time,kind=Math.abs(delta)<=this.window?'on time':delta<0?'early':'late';const result={kind,note,delta};this.hits.push(result);return result;
+  if(!target){if(!this.pitchless&&this.expected.some(e=>Math.abs(e.time-time)<=this.window))this.wrong++;else this.stray++;this.errors.push(time);return {kind:'extra',note};}
+  target.matched=true;const delta=time-target.time,kind=Math.abs(delta)<=this.window?'on time':delta<0?'early':'late';target.result=kind;const result={kind,note,delta};this.hits.push(result);return result;
  }
+ // Results per measure; measureOf maps an absolute beat to its measure number.
+ measureResults(measureOf){const out=new Map(),get=m=>{if(!out.has(m))out.set(m,{onTime:0,early:0,late:0,missed:0,wrong:0,n:0});return out.get(m);};for(const e of this.expected){const r=get(measureOf(e.time/this.seconds));r.n++;if(!e.matched)r.missed++;else r[e.result==='on time'?'onTime':e.result]++;}for(const t of this.errors)get(measureOf(t/this.seconds)).wrong++;return out;}
  summary(){return {expected:this.expected.length,onTime:this.hits.filter(e=>e.kind==='on time').length,early:this.hits.filter(e=>e.kind==='early').length,late:this.hits.filter(e=>e.kind==='late').length,missed:this.expected.filter(e=>!e.matched).length,wrong:this.wrong,extra:this.stray};}
 }

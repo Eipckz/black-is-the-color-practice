@@ -1,4 +1,5 @@
-import {defaults,validate} from './settings.js?v=4';
+import {defaults,validate} from './settings.js?v=5';
+import {validHistory} from './estimate.js?v=11';
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {
   const sections = [];
@@ -35,6 +36,10 @@ export function freshState(saved={}, sections, measures, pieceDefaults={}) {
   for(const p of phases.slice(0,3))if(!Number.isInteger(state.targets[p])||state.targets[p]<1||state.targets[p]>10000)state.targets[p]=12;
   for(const key of ['customStart','customEnd'])state[key]=Number.isInteger(state[key])?Math.max(1,Math.min(measures,state[key])):1;
   if(state.customStart>state.customEnd)state.customEnd=state.customStart;
+  // Practice history rows and recent per-measure accuracy from timed checks.
+  state.history=validHistory(state.history);
+  const stats=state.measureStats&&typeof state.measureStats==='object'&&!Array.isArray(state.measureStats)?state.measureStats:{};
+  state.measureStats=Object.fromEntries(Object.entries(stats).filter(([m,v])=>Number.isInteger(Number(m))&&m>=1&&m<=measures&&v&&Number.isFinite(v.acc)&&v.acc>=0&&v.acc<=1).map(([m,v])=>[m,{acc:v.acc,n:Math.max(1,Math.round(v.n)||1),t:Number(v.t)||0}]));
   // Trouble-spot flags: measure numbers the player marked.
   state.flags=[...new Set((Array.isArray(state.flags)?state.flags:[]).filter(m=>Number.isInteger(m)&&m>=1&&m<=measures))].sort((a,b)=>a-b);
   const notes=state.notes&&typeof state.notes==='object'&&!Array.isArray(state.notes)?state.notes:{};

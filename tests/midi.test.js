@@ -31,3 +31,9 @@ test('pitchless taps score each note start once, including chords',()=>{
  assert.equal(r.hit(null,-2).kind,'ignored');assert.equal(r.hit(null,.05).kind,'on time');assert.equal(r.hit(null,.1).kind,'extra','a second tap on the same chord is extra');
  assert.equal(r.hit(null,1.4).kind,'late');const s=r.summary();assert.deepEqual([s.onTime,s.late,s.missed,s.extra,s.wrong],[1,1,1,1,0]);
 });
+test('timed check results group by measure, including wrong and extra attacks',()=>{
+ const r=new RhythmCheck([{beat:0,notes:[40]},{beat:2,notes:[43]},{beat:4,notes:[45]},{beat:6,notes:[47]}],60,'balanced');
+ r.hit(40,.05);r.hit(43,2.5);r.hit(50,4.02);r.hit(40,5.3);
+ const m=r.measureResults(beat=>Math.floor(beat/4)+1);
+ assert.deepEqual(m.get(1),{onTime:1,early:0,late:1,missed:0,wrong:0,n:2});assert.deepEqual(m.get(2),{onTime:0,early:0,late:0,missed:2,wrong:2,n:2});
+});

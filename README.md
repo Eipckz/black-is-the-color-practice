@@ -33,6 +33,12 @@ All of these are in Settings and switched on by the Beginner preset:
 - **Metronome pattern** (Sound & playback): every click, only the first beat of each measure, or silent every second measure, so you keep the pulse yourself.
 - **Fade a hand out** (Sound & playback): in Mix & combine, each clean round lowers the chosen hand's playback by 20%, so you take that hand over gradually.
 
+## Tools for advanced players
+
+- **Accuracy colours** (Settings, Score): after each MIDI timed check or rhythm tap, every measure is tinted from green to red by its recent share of on-time note starts (each new check is averaged with the previous result). Clear accuracy colours resets them for the piece.
+- **Memorization** (Settings, Practice flow): hide the section's notes, beams and ties after two clean rounds, or always; barlines, rests and bar numbers stay. Hold **Peek** or the P key to look. Optionally hide the dimmed measures too.
+- **Practice history** (Settings, Practice flow): every rated round is recorded on this device (up to 2,000 per piece, included in backups). The plan panel shows the last 30 days as a bar strip (height = minutes timed, darkness = share of clean rounds), the latest rounds, and a CSV download.
+
 ## Settings
 
 Open **⚙ Settings** in the header (or press the comma key) for every option, grouped into Score, Sound & playback, Practice flow, Display, Shortcuts and Your data. Each control is tagged **this piece** (saved with the piece's progress) or **all pieces** (saved for this device: theme, colours, text size, microphone octave check, daily goal, shortcuts). The Sound & quick settings panel under the score keeps only what you change mid-practice: volume, hand balance with Hear LH / RH / Both, count-in and metronome.

@@ -23,6 +23,7 @@ export const settings=[
  check('outlineNext','piece','score','Outline upcoming notes',false,'marks'),
  check('showCueGuide','piece','score','Show the notes and fingerings guide',true,'marks'),
  check('autoFollow','piece','score','Follow the playing position during playback',true),
+ check('heatmap','piece','score','Colour measures by accuracy in timed checks',false,'render',{help:'Green to red, from your recent MIDI timed checks and rhythm taps.'}),
  check('showExpression','piece','score','Dynamics, articulation, slurs and pedal marks',false,'render',{help:'Imported scores. Engraving only: playback stays even.'}),
  select('noteNames','piece','score','Note names on noteheads','off',[['off','Off'],['letters','Letters (C D E)'],['solfege','Fixed do (Do Re Mi)']],'render'),
  check('printNoteNames','piece','score','Print note names',false,'render'),
@@ -42,6 +43,9 @@ export const settings=[
  check('tempoRamp','piece','practice','Tempo ramp: raise a passage one step after two clean rounds',false,'render'),
  range('rampTarget','piece','practice','Tempo ramp target',80,30,180,1,'render',{unit:' BPM',help:'Starts at the marked tempo when the score has one.'}),
  check('loopAccelerate','piece','practice','Speed up one tempo step on each loop pass',false,'none',{help:'Stops at the tempo ramp target.'}),
+ select('memorize','piece','practice','Memorization','off',[['off','Off'],['after2','Hide notes after two clean rounds'],['always','Always hide the section’s notes']],'render',{help:'Barlines, rests and bar numbers stay. Hold Peek or the P key to see the notes.'}),
+ check('memorizeAll','piece','practice','Also hide the dimmed measures while memorizing',false,'render'),
+ check('showHistory','piece','practice','Show practice history in the plan',false,'render',{help:'Every rated round is recorded on this device either way.'}),
  check('autoHint','piece','practice','Show the starting hint for a passage’s first three rounds',false,'render'),
  {key:'dailyGoal',scope:'device',group:'practice',label:'Daily practice goal (minutes, 0 = off)',type:'number',default:0,min:0,max:600,step:5,refresh:'estimate'},
  // Display
@@ -70,7 +74,7 @@ export function validate(key,value,fallback=settingByKey[key]?.default){
  return typeof n==='number'&&Number.isFinite(n)?Math.max(s.min,Math.min(s.max,Math.round(n))):fallback;
 }
 // Shortcut actions and their default keys (KeyboardEvent.code).
-export const actions=[['playPause','Play or pause','Space'],['previousNote','Previous notes','ArrowLeft'],['nextNote','Next notes','ArrowRight'],['loop','Change loop','KeyL'],['metronome','Metronome on or off','KeyM'],['rate1','Rate: needs a slow retry','Digit1'],['rate2','Rate: close, one stumble','Digit2'],['rate3','Rate: clean and steady','Digit3'],['nextRound','Next round','KeyN'],['openSettings','Open settings','Comma']];
+export const actions=[['playPause','Play or pause','Space'],['previousNote','Previous notes','ArrowLeft'],['nextNote','Next notes','ArrowRight'],['loop','Change loop','KeyL'],['metronome','Metronome on or off','KeyM'],['rate1','Rate: needs a slow retry','Digit1'],['rate2','Rate: close, one stumble','Digit2'],['rate3','Rate: clean and steady','Digit3'],['nextRound','Next round','KeyN'],['openSettings','Open settings','Comma'],['peek','Peek at hidden notes (hold)','KeyP']];
 export function validKeys(value){
  const keys=Object.fromEntries(actions.map(([id,,code])=>[id,code]));if(!value||typeof value!=='object')return keys;
  for(const [id] of actions)if(typeof value[id]==='string'&&/^[A-Za-z0-9]{0,24}$/.test(value[id]))keys[id]=value[id];
@@ -78,9 +82,9 @@ export function validKeys(value){
 }
 // Presets set only the keys they list and leave every other setting alone.
 export const presets={
- beginner:{label:'Beginner',values:{scoreView:'piece',contextDim:75,sectionSize:1,highlightMode:'notes',outlineNext:true,showCueGuide:true,countBars:2,metronomeSub:'eighth',tempoStep:2,autoSlow:true,learnOrder:'left',interleave:'near',noteNames:'letters',showKeyboard:true,tempoRamp:true,autoHint:true}},
- intermediate:{label:'Intermediate',values:{scoreView:'piece',contextDim:65,sectionSize:2,highlightMode:'notes',outlineNext:false,showCueGuide:true,countBars:1,metronomeSub:'beat',tempoStep:5,autoSlow:true,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:true,autoHint:false,showExpression:true}},
- advanced:{label:'Advanced',values:{scoreView:'piece',contextDim:40,sectionSize:4,highlightMode:'measure',outlineNext:false,showCueGuide:false,countBars:1,metronomeSub:'beat',tempoStep:10,autoSlow:false,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:false,autoHint:false,showExpression:true}},
+ beginner:{label:'Beginner',values:{scoreView:'piece',contextDim:75,sectionSize:1,highlightMode:'notes',outlineNext:true,showCueGuide:true,countBars:2,metronomeSub:'eighth',tempoStep:2,autoSlow:true,learnOrder:'left',interleave:'near',noteNames:'letters',showKeyboard:true,tempoRamp:true,autoHint:true,memorize:'off'}},
+ intermediate:{label:'Intermediate',values:{scoreView:'piece',contextDim:65,sectionSize:2,highlightMode:'notes',outlineNext:false,showCueGuide:true,countBars:1,metronomeSub:'beat',tempoStep:5,autoSlow:true,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:true,autoHint:false,showExpression:true,memorize:'off'}},
+ advanced:{label:'Advanced',values:{scoreView:'piece',contextDim:40,sectionSize:4,highlightMode:'measure',outlineNext:false,showCueGuide:false,countBars:1,metronomeSub:'beat',tempoStep:10,autoSlow:false,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:false,autoHint:false,showExpression:true,memorize:'after2'}},
 };
 // The preset whose every value matches; sectionSize is ignored where sections are fixed.
 export function matchingPreset(get,fixedSections=false){
