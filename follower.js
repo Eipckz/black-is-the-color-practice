@@ -1,8 +1,10 @@
-// Map the written accompaniment to abcjs voice/measure/note groups.
-export function makeCues(events, hand, start, beatsPerMeasure=4){
- const voices=hand==='both'?['right','left']:[hand], counters=new Map();
+import {measureAt} from './engine.js?v=6';
+// Map the written accompaniment to abcjs voice/measure/note groups. Pass the measure length, or the
+// measure starts of a score whose meter changes.
+export function makeCues(events, hand, start, measures=4){
+ const voices=hand==='both'?['right','left']:[hand], counters=new Map(), bar=Array.isArray(measures)?beat=>measureAt(measures,beat):beat=>Math.floor((beat+1e-6)/measures)+1;
  return events.filter(e=>voices.includes(e.voice)).map(e=>{
-  const measure=Math.floor((e.beat+1e-6)/beatsPerMeasure)-(start-1),voice=voices.indexOf(e.voice),key=voice+':'+measure,index=counters.get(key)||0;counters.set(key,index+1);
+  const measure=bar(e.beat)-start,voice=voices.indexOf(e.voice),key=voice+':'+measure,index=counters.get(key)||0;counters.set(key,index+1);
   return {...e,selector:'.abcjs-v'+voice+'.abcjs-mm'+measure+'.abcjs-n'+index};
  });
 }

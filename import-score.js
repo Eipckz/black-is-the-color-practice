@@ -1,4 +1,5 @@
 // Local MusicXML reading. No uploads or external conversion service.
+import {measureStarts} from './engine.js?v=6';
 const text=(node,selector,fallback='')=>node.querySelector(selector)?.textContent.trim()??fallback;
 const number=(node,selector,fallback)=>Number(text(node,selector,String(fallback)));
 const children=(node,name)=>Array.from(node.children).filter(n=>n.localName===name);
@@ -21,6 +22,8 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   const measures=children(selected,'measure');
   if(!measures.length||measures.length>500)fail('Import between 1 and 500 measures at a time.');
   let divisions=1,meter=null,beats=4,beatType=4,key=0,tempo=null;
+  // Meters may change: every measure keeps its own meter and absolute start in quarter-note beats.
+  const starts=[0],meters=[];
   const measureKeys=[];
   const raw={right:[],left:[]},clefs={right:'treble',left:'bass'};
   const warnings=new Set(['Playback uses a steady tempo. Follow expressive dynamics, pedal, ornaments, and tempo changes yourself.']);
@@ -29,12 +32,12 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
     if(attr){
       divisions=number(attr,'divisions',divisions);if(!(divisions>0))fail('Invalid MusicXML divisions.');
       const time=attr.querySelector('time');
-      if(time){const b=number(time,'beats',4),t=number(time,'beat-type',4);if(!Number.isInteger(b)||b<1||b>12||![2,4,8,16].includes(t))fail('Use a simple numeric time signature.');if(meter&&meter!==`${b}/${t}`)fail('Changing time signatures are not supported yet. Import each constant-meter section separately.');beats=b;beatType=t;meter=`${b}/${t}`;}
+      if(time){const b=number(time,'beats',4),t=number(time,'beat-type',4);if(!Number.isInteger(b)||b<1||b>12||![2,4,8,16].includes(t))fail('Use a simple numeric time signature.');beats=b;beatType=t;meter??=b+'/'+t;}
       const nextKey=number(attr,'key fifths',key);if(!Number.isInteger(nextKey)||Math.abs(nextKey)>7)fail('Use a standard key signature with at most seven sharps or flats.');key=nextKey;
       for(const clef of children(attr,'clef')){const staff=Number(clef.getAttribute('number')||1),sign=text(clef,'sign'),line=number(clef,'line',sign==='F'?4:2);if(!((sign==='G'&&line===2)||(sign==='F'&&line===4))||number(clef,'clef-octave-change',0)!==0)fail('Only standard treble and bass clefs are supported.');if(index)warnings.add('The practice score uses the opening clefs throughout.');else clefs[staff===2?'left':'right']=sign==='F'?'bass':'treble';}
     }
-    measureKeys.push(key);
-    const length=beats*4/beatType,base=index*length;let cursor=0,previous=null,reached=0;
+    measureKeys.push(key);meters.push(beats+'/'+beatType);
+    const length=beats*4/beatType,base=starts[index];let cursor=0,previous=null,reached=0;
     const sound=measure.querySelector('sound[tempo]');if(index===0&&sound)tempo=Number(sound.getAttribute('tempo'))||null;
     for(const element of measure.children){
       if(['backup','forward'].includes(element.localName)){cursor+=(element.localName==='backup'?-1:1)*number(element,'duration',0)/divisions;if(cursor<-.00001)fail('Invalid backward position in MusicXML.');reached=Math.max(reached,cursor);continue;}
@@ -56,17 +59,17 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
     // A short opening measure is a pickup: it ends on the first barline. Other short measures are padded at the end.
     if(index===0&&reached<length-.00001){for(const n of [...raw.right,...raw.left])n.beat+=length-reached;warnings.add('Pickup measure placed at the end of bar 1.');}
     else if(reached<length-.00001)warnings.add('Short measures are padded with rests to the full meter.');
+    starts.push(base+length);
   });
   if(!raw.right.length&&!raw.left.length)fail('The score contains no playable piano notes.');
-  const beatsPerMeasure=beats*4/beatType;
-  const voices=Object.entries(raw).map(([id,notes])=>({id,events:segmentNotes(notes,measures.length,beatsPerMeasure)}));
-  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',beatsPerMeasure,clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
+  const voices=Object.entries(raw).map(([id,notes])=>({id,events:segmentNotes(notes,starts)}));
+  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',meters,measureStarts:starts,beatsPerMeasure:starts[1],clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
 }
 // Split overlapping voices into chord slices, retaining per-note ties and fingerings.
-export function segmentNotes(notes,measures,length){
+export function segmentNotes(notes,starts){
   const events=[];
-  for(let m=0;m<measures;m++){
-    const start=m*length,end=start+length,inBar=notes.filter(n=>n.beat<end-1e-7&&n.beat+n.duration>start+1e-7);
+  for(let m=0;m<starts.length-1;m++){
+    const start=starts[m],end=starts[m+1],inBar=notes.filter(n=>n.beat<end-1e-7&&n.beat+n.duration>start+1e-7);
     const cuts=[...new Set([start,end,...inBar.flatMap(n=>[Math.max(start,n.beat),Math.min(end,n.beat+n.duration)])].map(n=>Math.round(n*1e7)/1e7))].sort((a,b)=>a-b);
     for(let i=0;i<cuts.length-1;i++){
       const beat=cuts[i],duration=cuts[i+1]-beat,active=inBar.filter(n=>n.beat<=beat+1e-6&&n.beat+n.duration>beat+1e-6).sort((a,b)=>a.midi-b.midi);
@@ -99,16 +102,18 @@ function tupletAt(events,index,compound){
   return null;
 }
 export function importedExcerpt(score,hand,start,end,large=false,layout={}){
-  const ids=hand==='both'?['right','left']:[hand],[beats,beatType]=score.meter.split('/').map(Number),group=beatType===8&&beats%3===0?1.5:1;
-  let abc=`X:1\nT:Measures ${start}-${end}\nM:${score.meter}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
+  const ids=hand==='both'?['right','left']:[hand],starts=measureStarts(score),meterAt=m=>score.meters?.[m-1]??score.meter;
+  let abc=`X:1\nT:Measures ${start}-${end}\nM:${meterAt(start)}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
   for(const id of ids)abc+=`V:${id} clef=${score.clefs[id]} name="${id==='right'?'RH':'LH'}"\n`;
   const openingKey=score.measureKeys?.[start-1]??0;
   abc+='K:'+keyNames[openingKey+7]+'\n';
   for(const id of ids){abc+=`[V:${id}] `;const events=score.voices.find(v=>v.id===id).events;
     for(let m=start;m<=end;m++){
       const fifths=score.measureKeys?.[m-1]??0,accidentals=new Map();
+      if(m>start&&meterAt(m)!==meterAt(m-1))abc+='[M:'+meterAt(m)+'] ';
       if(m>start&&fifths!==(score.measureKeys?.[m-2]??0))abc+='[K:'+keyNames[fifths+7]+'] ';
-      const inBar=events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m),barStart=(m-1)*score.beatsPerMeasure;
+      const [beats,beatType]=meterAt(m).split('/').map(Number),group=beatType===8&&beats%3===0?1.5:1;
+      const inBar=events.filter(e=>e.beat>=starts[m-1]-1e-6&&e.beat<starts[m]-1e-6),barStart=starts[m-1];
       let tupletRemaining=0,factor=1;
       for(let i=0;i<inBar.length;i++){
         const e=inBar[i];
