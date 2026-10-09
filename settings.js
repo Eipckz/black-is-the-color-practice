@@ -33,6 +33,8 @@ export const settings=[
  select('metronomeSub','piece','sound','Metronome clicks','beat',[['beat','Each beat'],['eighth','Each eighth note']]),
  select('metronomeMode','piece','sound','Metronome pattern','steady',[['steady','Every click'],['accents','Only the first beat of each measure'],['silent','Silent every second measure']],'none',{help:'Fewer clicks make you keep the pulse yourself.'}),
  select('fadeHand','piece','sound','Fade a hand out in hands-together rounds','off',[['off','Off'],['left','Left hand'],['right','Right hand']],'none',{help:'Each clean Mix & combine round lowers that hand’s playback by 20%, so you gradually take it over.'}),
+ check('recorder','device','sound','Show the recorder (recordings stay on this device)',false,'display'),
+ check('midiPageTurn','device','sound','Sustain pedal turns the page in performance mode',false),
  select('micOctaveTolerance','device','sound','Microphone octave check','low',[['strict','Exact octave only'],['low','Allow an octave error below C3'],['any','Allow any octave error']],'none',{help:'Phone microphones often hear low notes an octave high.'}),
  // Practice flow
  select('sectionSize','piece','practice','Section size',2,[[1,'1 measure'],[2,'2 measures'],[4,'4 measures']],'sections',{help:'Imported pieces only. Each size keeps its own records.'}),

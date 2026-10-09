@@ -164,3 +164,18 @@ html{scroll-padding-top:120px}
 .history-table th,.history-table td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .history-table th{font-size:11px;color:var(--muted);font-weight:600}
 @media print{#notation .heat{display:none}#notation .memorize{visibility:visible!important}}
+/* Recorder and performance mode */
+.recorder-panel{display:none}
+.show-recorder .recorder-panel{display:block}
+.recorder>button{width:100%;margin:4px 0}
+.record-list{padding-left:18px;margin:10px 0 0;font-size:13px}
+.record-list li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.record-list li span{flex:1 1 220px}
+.record-list button{min-height:36px;padding:6px 12px;font-size:12px}
+.performance header,.performance .phases,.performance .lesson>.section-head,.performance #lessonTitle,.performance .auto-hint,.performance .controls,.performance .tempo-mark,.performance .toolbar,.performance .position,.performance .play-status,.performance .beat-bar,.performance .practice-estimate,.performance .score-navigation,.performance .cue-guide,.performance .feedback,.performance .practice-extras,.performance .optional-tools,.performance .tool-panel,.performance footer,.performance .keyboard-strip,.performance .library{display:none!important}
+.performance #scoreWrap{max-height:none!important;overflow:visible!important;margin:0}
+.performance .lesson{border:0;padding:4px 8px;background:var(--sheet)}
+.performance .repertoire-shell{max-width:none;padding:0}
+.performance-bar{position:fixed;right:12px;bottom:12px;z-index:40;display:flex;gap:6px;padding:6px;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px #0003}
+.performance-bar button{min-width:52px}
+@media print{.performance-bar{display:none!important}}
