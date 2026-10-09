@@ -34,10 +34,10 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
       for(const clef of children(attr,'clef')){const staff=Number(clef.getAttribute('number')||1),sign=text(clef,'sign'),line=number(clef,'line',sign==='F'?4:2);if(!((sign==='G'&&line===2)||(sign==='F'&&line===4))||number(clef,'clef-octave-change',0)!==0)fail('Only standard treble and bass clefs are supported.');if(index)warnings.add('The practice score uses the opening clefs throughout.');else clefs[staff===2?'left':'right']=sign==='F'?'bass':'treble';}
     }
     measureKeys.push(key);
-    const length=beats*4/beatType,base=index*length;let cursor=0,previous=null;
+    const length=beats*4/beatType,base=index*length;let cursor=0,previous=null,reached=0;
     const sound=measure.querySelector('sound[tempo]');if(index===0&&sound)tempo=Number(sound.getAttribute('tempo'))||80;
     for(const element of measure.children){
-      if(['backup','forward'].includes(element.localName)){cursor+=(element.localName==='backup'?-1:1)*number(element,'duration',0)/divisions;if(cursor<-.00001)fail('Invalid backward position in MusicXML.');continue;}
+      if(['backup','forward'].includes(element.localName)){cursor+=(element.localName==='backup'?-1:1)*number(element,'duration',0)/divisions;if(cursor<-.00001)fail('Invalid backward position in MusicXML.');reached=Math.max(reached,cursor);continue;}
       if(element.localName!=='note')continue;
       const duration=number(element,'duration',0)/divisions;if(!(duration>0))fail('Every note needs a positive duration. Export a measured practice copy.');
       const chord=!!element.querySelector('chord'),start=chord?previous:cursor;if(start===null)fail('A chord is missing its first note.');
@@ -51,8 +51,11 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
         raw[staff===2?'left':'right'].push({beat:base+start,duration,midi,step,octave,alter,finger:text(element,'notations technical fingering'),tieStart:ties.includes('start'),tieEnd:ties.includes('stop')});
       }
       if(!chord){previous=cursor;cursor+=duration;}
+      reached=Math.max(reached,start+duration);
     }
-    if(cursor<length-.00001)warnings.add('Short measures, including pickups, are padded with rests to the full meter.');
+    // A short opening measure is a pickup: it ends on the first barline. Other short measures are padded at the end.
+    if(index===0&&reached<length-.00001){for(const n of [...raw.right,...raw.left])n.beat+=length-reached;warnings.add('Pickup measure placed at the end of bar 1.');}
+    else if(reached<length-.00001)warnings.add('Short measures are padded with rests to the full meter.');
   });
   if(!raw.right.length&&!raw.left.length)fail('The score contains no playable piano notes.');
   const beatsPerMeasure=beats*4/beatType;

@@ -52,7 +52,7 @@ test('quarter-note triplets retain quarter-note values and exact performance dur
 });
 
 test('triplets include rests and chords while genuine dotted notes remain dotted',()=>{
-  const score=scoreFor(note('C',8)+note('E',8,{chord:true})+'<note><rest/><duration>8</duration></note>'+note('G',8)+note('A',9,{type:'16th'})+note('B',9,{type:'16th'})+note('C',9,{type:'16th'}));
+  const score=scoreFor(note('C',8)+note('E',8,{chord:true})+'<note><rest/><duration>8</duration></note>'+note('G',8)+note('A',9,{type:'16th'})+note('B',9,{type:'16th'})+note('C',9,{type:'16th'})+'<note><rest/><duration>45</duration></note>');
   const notes=notationNotes(importedExcerpt(score,'right',1,1));
   assert.equal(notes.filter(n=>n.startTriplet).length,1);assert.equal(notes[0].pitches.length,2);assert.equal(notes[1].rest.type,'rest');assert.equal(notes[2].endTriplet,true);
   assert.ok(notes.slice(3,6).every(n=>n.duration===3/32),'real dotted sixteenths retain their written duration');

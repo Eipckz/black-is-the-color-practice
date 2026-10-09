@@ -19,7 +19,7 @@ test('imported notation omits redundant naturals and repeats but cancels alterat
   assert.equal(importedExcerpt(s,'right',1,2),abc,'previously saved imports also improve immediately');
 });
 test('accidentals reset by measure and octave, and excerpts establish their own state',()=>{
-  const s=accidentalScore([pitchNote('F',1)+pitchNote('F',0,5)+pitchNote('F',1),pitchNote('F',1)+pitchNote('F',1)]);
+  const s=accidentalScore([pitchNote('F',1)+pitchNote('F',0,5)+pitchNote('F',1)+'<note><rest/><duration>1</duration></note>',pitchNote('F',1)+pitchNote('F',1)]);
   assert.match(importedExcerpt(s,'right',1,2),/\^F1\/1 f1\/1 F1\/1 z1\/1 \| \^F1\/1 F1\/1/);
   assert.match(importedExcerpt(s,'right',2,2),/\[V:right\] \^F1\/1 F1\/1/);
 });
@@ -45,4 +45,14 @@ test('multi-part import requests a named selection and ignores unsupported other
 test('MIDI and overfull bars give specific actionable errors',()=>{
  assert.throws(()=>parse('MThd0000'),/MIDI/);
  assert.throws(()=>parse(xml.replace('<duration>12</duration>','<duration>16</duration>')),/Measure/);
+});
+test('a short opening measure is a pickup that ends on the first barline',()=>{
+ const s=accidentalScore([pitchNote('G'),pitchNote('C')+pitchNote('D')+pitchNote('E')+pitchNote('F'),pitchNote('G')+pitchNote('A')]);
+ const right=s.voices[0].events.filter(e=>e.notes.length);
+ assert.equal(right[0].beat,3);assert.equal(right[1].beat,4);
+ assert.ok(s.warnings.some(w=>/Pickup/.test(w)));
+ const last=eventsFor(s,'right',3,3);assert.equal(last[0].beat,8);assert.deepEqual(last[0].notes,[67]);assert.equal(last.at(-1).notes.length,0,'short final bar is padded after its notes');
+ assert.equal(eventsFor(s,'right',1,3).reduce((n,e)=>n+e.duration,0),12);
+ assert.equal(scheduleFrom(eventsFor(s,'right',1,3),0,12).reduce((n,e)=>n+e.length,0),7);
+ assert.match(importedExcerpt(s,'right',1,1),/z3\/1 G1\/1 \|/);
 });
