@@ -10,7 +10,7 @@ export function makeSections(measures) {
 }
 export function freshState(saved={}, sections, measures) {
   const phase=phases.includes(saved.phase)?saved.phase:'learn';
-  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',outlineNext:false,scoreView:'page',pageMeasures:8,barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,records:{},...saved,phase};
+  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,metronomeSub:'beat',scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',outlineNext:false,scoreView:'page',pageMeasures:8,barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,records:{},...saved,phase};
   state.stages={};
   for(const p of phases) {
     const old=saved.stages?.[p]||{};
@@ -29,6 +29,7 @@ export function freshState(saved={}, sections, measures) {
   if(state.customStart>state.customEnd)state.customEnd=state.customStart;
   for(const key of ['volume','leftVolume','rightVolume'])state[key]=Number.isFinite(state[key])?Math.max(0,Math.min(100,state[key])):75;
   if(![0,1,2].includes(state.countBars))state.countBars=1;
+  if(!['beat','eighth'].includes(state.metronomeSub))state.metronomeSub='beat';
   if(!['section','page','piece'].includes(state.scoreView))state.scoreView='page';
   if(![4,8,12,16].includes(state.pageMeasures))state.pageMeasures=8;
   if(!['auto',1,2,4].includes(state.barsPerLine))state.barsPerLine='auto';

@@ -14,6 +14,12 @@ Start timer (or playback) measures active practice. Rating pauses the timer; Nex
 
 By default the score shows the page around the current section: the section stays at full strength and the rest of the page is dimmed, so you can see where the passage sits. Each system shows its real measure number. In Score, sound & practice settings choose **Score view** (current section only, page, or whole piece), **Page size** (4, 8, 12 or 16 measures; phones start at 4), **Measures per line** (auto: 4 on wide screens, 2 up to 900 px, 1 on phones), and how strongly the rest of the page is dimmed (0–90%). Playback, highlighting, Previous/Next notes, MIDI and microphone checks stay inside the section. Tap a dimmed measure to practise that measure on its own.
 
+## Display, playback and shortcuts
+
+Choose your own right- and left-hand highlight colours (Reset restores orange and green), turn the purple sharps and flats off, and pick a light, dark, or device-matched theme. Dark theme inverts the engraving so it reads light; choose white paper behind the notation if you prefer. These display choices belong to the device, like the compact view. Print this score page (Downloads & help) prints the current page of notation at full strength without the controls.
+
+Loop plays a section twice, four times, or until stopped. The metronome can click each beat or each eighth note. Hear LH only, RH only, or Both hands sets the two hand sliders in one tap. Keyboard shortcuts: Space play/pause, ← → previous/next notes, L loop, M metronome, 1 2 3 rate the round, N next round. They are ignored while a form control has focus.
+
 ## Library and four practice stages
 
 - The library sidebar lists saved pieces and their last practice stage. Select a piece to restore its stage, section, hand, tempo, targets, and progress. On phones the library appears above the workspace.
