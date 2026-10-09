@@ -1,4 +1,4 @@
-import {defaults,validate} from './settings.js?v=3';
+import {defaults,validate} from './settings.js?v=4';
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {
   const sections = [];

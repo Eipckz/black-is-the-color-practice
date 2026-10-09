@@ -23,6 +23,7 @@ export const settings=[
  check('outlineNext','piece','score','Outline upcoming notes',false,'marks'),
  check('showCueGuide','piece','score','Show the notes and fingerings guide',true,'marks'),
  check('autoFollow','piece','score','Follow the playing position during playback',true),
+ check('showExpression','piece','score','Dynamics, articulation, slurs and pedal marks',false,'render',{help:'Imported scores. Engraving only: playback stays even.'}),
  select('noteNames','piece','score','Note names on noteheads','off',[['off','Off'],['letters','Letters (C D E)'],['solfege','Fixed do (Do Re Mi)']],'render'),
  check('printNoteNames','piece','score','Print note names',false,'render'),
  check('showKeyboard','piece','score','Keyboard under the score',false,'render',{help:'Shows the keys to play now and outlines the next ones.'}),
@@ -78,8 +79,8 @@ export function validKeys(value){
 // Presets set only the keys they list and leave every other setting alone.
 export const presets={
  beginner:{label:'Beginner',values:{scoreView:'piece',contextDim:75,sectionSize:1,highlightMode:'notes',outlineNext:true,showCueGuide:true,countBars:2,metronomeSub:'eighth',tempoStep:2,autoSlow:true,learnOrder:'left',interleave:'near',noteNames:'letters',showKeyboard:true,tempoRamp:true,autoHint:true}},
- intermediate:{label:'Intermediate',values:{scoreView:'piece',contextDim:65,sectionSize:2,highlightMode:'notes',outlineNext:false,showCueGuide:true,countBars:1,metronomeSub:'beat',tempoStep:5,autoSlow:true,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:true,autoHint:false}},
- advanced:{label:'Advanced',values:{scoreView:'piece',contextDim:40,sectionSize:4,highlightMode:'measure',outlineNext:false,showCueGuide:false,countBars:1,metronomeSub:'beat',tempoStep:10,autoSlow:false,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:false,autoHint:false}},
+ intermediate:{label:'Intermediate',values:{scoreView:'piece',contextDim:65,sectionSize:2,highlightMode:'notes',outlineNext:false,showCueGuide:true,countBars:1,metronomeSub:'beat',tempoStep:5,autoSlow:true,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:true,autoHint:false,showExpression:true}},
+ advanced:{label:'Advanced',values:{scoreView:'piece',contextDim:40,sectionSize:4,highlightMode:'measure',outlineNext:false,showCueGuide:false,countBars:1,metronomeSub:'beat',tempoStep:10,autoSlow:false,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:false,autoHint:false,showExpression:true}},
 };
 // The preset whose every value matches; sectionSize is ignored where sections are fixed.
 export function matchingPreset(get,fixedSections=false){
