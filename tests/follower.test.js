@@ -29,11 +29,22 @@ test('selectors remain unique for every hand and excerpt start',()=>{
  }
 });
 
-test('altered noteheads include key-signature flats and explicit sharps but exclude naturals',async()=>{
+test('altered noteheads separate key-signature alterations from accidentals',async()=>{
  const {alteredNoteHeads}=await import('../follower.js');
- const e={notes:[50,53,58],spellings:[{step:'D',octave:3,alter:0},{step:'F',octave:3,alter:0},{step:'B',octave:3,alter:-1}]};
- assert.deepEqual(alteredNoteHeads(e),[{name:'B,',alter:-1,label:'B flat 3'}]);
- assert.deepEqual(alteredNoteHeads({notes:[65],spellings:[{step:'E',octave:4,alter:1}]}),[{name:'E',alter:1,label:'E sharp 4'}]);
+ const sp=(step,octave,alter)=>({step,octave,alter});
+ assert.deepEqual(alteredNoteHeads({notes:[54],spellings:[sp('F',3,1)]},1),[{name:'F,',alter:1,kind:'key',label:'F sharp 3 (key signature)'}],'E minor F sharp');
+ assert.equal(alteredNoteHeads({notes:[51],spellings:[sp('D',3,1)]},1)[0].kind,'chromatic','D sharp in E minor');
+ assert.deepEqual(alteredNoteHeads({notes:[53],spellings:[sp('F',3,0)]},1).map(p=>[p.kind,p.label]),[['chromatic','F natural 3 (accidental)']],'F natural in G major');
+ assert.deepEqual(alteredNoteHeads({notes:[48],spellings:[sp('C',3,0)]},0),[],'C natural in C major');
+ assert.deepEqual(alteredNoteHeads({notes:[50,53,58],spellings:[sp('D',3,0),sp('F',3,0),sp('B',3,-1)]},-1).map(p=>p.kind),['key']);
+ assert.equal(alteredNoteHeads({notes:[54]},1)[0].kind,'key','unspelled built-in F sharp in E minor');
+ assert.equal(alteredNoteHeads({notes:[51]},1)[0].name,'D,','unspelled notes use sharps in sharp keys');
  assert.deepEqual(alteredNoteHeads({notes:[]}),[]);
- assert.equal(alteredNoteHeads({notes:[50,54]})[0].name,'F,');
+});
+test('an imported key change applies from its measure',async()=>{
+ const {alteredNoteHeads}=await import('../follower.js');const {parseMusicXML}=await import('../import-score.js');const {DOMParser}=await import('linkedom');
+ const n=(step,alter)=>`<note><pitch><step>${step}</step><alter>${alter}</alter><octave>4</octave></pitch><duration>4</duration></note>`;
+ const s=parseMusicXML(`<score-partwise><part id="p"><measure><attributes><divisions>1</divisions><key><fifths>-1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time></attributes>${n('B',-1)}</measure><measure><attributes><key><fifths>0</fifths></key></attributes>${n('B',-1)}</measure></part></score-partwise>`,'k',DOMParser);
+ const [first,second]=s.voices[0].events.filter(e=>e.notes.length);
+ assert.equal(alteredNoteHeads(first,s.measureKeys[0])[0].kind,'key');assert.equal(alteredNoteHeads(second,s.measureKeys[1])[0].kind,'chromatic');
 });

@@ -1,14 +1,14 @@
 import {timingState,recordTimedRound,estimatePractice,timeText,dailyState,addPractice,mergeDaily} from './estimate.js?v=10';
 import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWindow} from './midi.js?v=5';
-import {makeCues,cueState,stepBeat,alteredNoteHeads} from './follower.js?v=11';
+import {makeCues,cueState,stepBeat,alteredNoteHeads} from './follower.js?v=12';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern} from './practice.js?v=12';
 import {renderWindow,contextMeasures,lineBars} from './view.js?v=2';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=19';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=20';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore} from './library.js?v=11';
 let score=builtinScore, activeId=BUILTIN, library=[], starts=measureStarts(builtinScore);
-import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress,measureStarts,measureAt} from './engine.js?v=6';
+import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress,measureStarts,measureAt} from './engine.js?v=7';
 const $=id=>document.getElementById(id);
 const builtinSections=[
  {name:'Opening pattern',start:1,end:2,goal:'Give the left-hand bass its full length. The right hand begins on the “and” of beat 1.',hint:'LH: E2 (2), then E2 (2) → B1 (5). RH: E3 with thumb; G3 + B3 with 3 + 5. For B minor: B2, then D3 + F♯3.'},
@@ -81,7 +81,7 @@ function bindCues(w){
  cues=all.filter(c=>c.beat>=first-1e-6&&c.beat<last-1e-6);
  const inside=new Set(cues);
  for(const cue of all){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';node.onclick=inside.has(cue)?()=>seekTo(cue.beat-first):()=>practiceMeasure(barAt(cue.beat));
- const altered=alteredNoteHeads(cue);for(const head of node.querySelectorAll('.abcjs-notehead')){const name=(head.getAttribute('data-name')||'').replace(/^[=^_]+/,'');const pitch=altered.find(p=>p.name===name);if(pitch){head.classList.add('altered-pitch');head.setAttribute('aria-label',pitch.label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=pitch.label;head.append(title);}}
+ const altered=alteredNoteHeads(cue,score.measureKeys?.[barAt(cue.beat)-1]??0);for(const head of node.querySelectorAll('.abcjs-notehead')){const name=(head.getAttribute('data-name')||'').replace(/^[=^_]+/,'');const pitch=altered.find(p=>p.name===name);if(pitch){head.classList.add('altered-pitch','altered-'+pitch.kind);head.setAttribute('aria-label',pitch.label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=pitch.label;head.append(title);}}
  }
 }
 function cueText(list){return list.length?list.map(e=>(e.voice==='left'?'LH: ':'RH: ')+(e.notes.length?e.notes.map(noteName).join(' + ')+(fingers(e)?' · fingers '+fingers(e):''):'rest')).join(' | '):'End of section';}
@@ -150,12 +150,12 @@ $('applyRange').onclick=()=>{const start=Number($('rangeStart').value),end=Numbe
 function setPracticeView(compact){document.body.classList.toggle('focus-mode',compact);$('focusMode').setAttribute('aria-pressed',String(compact));$('focusMode').textContent=compact?'Full view':'Compact view';try{localStorage.setItem('piano-compact-view',String(compact));}catch{}}
 try{setPracticeView(localStorage.getItem('piano-compact-view')!=='false');}catch{setPracticeView(true);}
 // Display preferences belong to this device, like the compact view, not to a piece.
-const displayDefaults={rhColor:'#b94c22',lhColor:'#176853',purple:true,theme:'auto',paper:false};let display={...displayDefaults};
-try{const saved=JSON.parse(localStorage.getItem('piano-display')||'{}');for(const key of ['rhColor','lhColor'])if(/^#[0-9a-f]{6}$/i.test(saved[key]))display[key]=saved[key];if(typeof saved.purple==='boolean')display.purple=saved.purple;if(['auto','light','dark'].includes(saved.theme))display.theme=saved.theme;if(typeof saved.paper==='boolean')display.paper=saved.paper;}catch{}
-function applyDisplay(){const root=document.documentElement;root.style.setProperty('--rh',display.rhColor);root.style.setProperty('--lh',display.lhColor);if(display.theme==='auto')delete root.dataset.theme;else root.dataset.theme=display.theme;document.body.classList.toggle('plain-accidentals',!display.purple);document.body.classList.toggle('paper-notation',display.paper);for(const key of ['rhColor','lhColor','theme'])$(key).value=display[key];$('purpleAccidentals').checked=display.purple;$('paperNotation').checked=display.paper;try{localStorage.setItem('piano-display',JSON.stringify(display));}catch{}}
-for(const key of ['rhColor','lhColor','theme'])$(key).oninput=$(key).onchange=()=>{display[key]=$(key).value;applyDisplay();};
-$('purpleAccidentals').onchange=()=>{display.purple=$('purpleAccidentals').checked;applyDisplay();};$('paperNotation').onchange=()=>{display.paper=$('paperNotation').checked;applyDisplay();};
-$('resetColors').onclick=()=>{display.rhColor=displayDefaults.rhColor;display.lhColor=displayDefaults.lhColor;applyDisplay();};
+const displayDefaults={rhColor:'#b94c22',lhColor:'#176853',handColours:'one',accidentalColours:'both',accKeyColour:'#7736ad',accChromaticColour:'#c2185b',theme:'auto',paper:false};let display={...displayDefaults};
+try{const saved=JSON.parse(localStorage.getItem('piano-display')||'{}');for(const key of ['rhColor','lhColor','accKeyColour','accChromaticColour'])if(/^#[0-9a-f]{6}$/i.test(saved[key]))display[key]=saved[key];if(['one','perHand'].includes(saved.handColours))display.handColours=saved.handColours;if(['both','chromatic','off'].includes(saved.accidentalColours))display.accidentalColours=saved.accidentalColours;else if(saved.purple===false)display.accidentalColours='off';if(['auto','light','dark'].includes(saved.theme))display.theme=saved.theme;if(typeof saved.paper==='boolean')display.paper=saved.paper;}catch{}
+function applyDisplay(){const root=document.documentElement;root.style.setProperty('--rh',display.rhColor);root.style.setProperty('--lh',display.lhColor);root.style.setProperty('--acc-key',display.accKeyColour);root.style.setProperty('--acc-chromatic',display.accChromaticColour);document.body.classList.toggle('one-colour',display.handColours==='one');document.body.classList.toggle('acc-chromatic-only',display.accidentalColours==='chromatic');$('cueNowLabel').textContent=display.handColours==='one'?'Now · both hands in one colour':'Now · each hand in its own colour';$('handColourHelp').textContent=display.handColours==='one'?'Current notes in both hands use the right-hand colour (orange by default).':'Green = left hand; orange = right hand (by default).';if(display.theme==='auto')delete root.dataset.theme;else root.dataset.theme=display.theme;document.body.classList.toggle('plain-accidentals',display.accidentalColours==='off');document.body.classList.toggle('paper-notation',display.paper);for(const key of ['rhColor','lhColor','theme','handColours','accidentalColours','accKeyColour','accChromaticColour'])$(key).value=display[key];$('paperNotation').checked=display.paper;try{localStorage.setItem('piano-display',JSON.stringify(display));}catch{}}
+for(const key of ['rhColor','lhColor','theme','handColours','accidentalColours','accKeyColour','accChromaticColour'])$(key).oninput=$(key).onchange=()=>{display[key]=$(key).value;applyDisplay();};
+$('paperNotation').onchange=()=>{display.paper=$('paperNotation').checked;applyDisplay();};
+$('resetColors').onclick=()=>{for(const key of ['rhColor','lhColor','accidentalColours','accKeyColour','accChromaticColour'])display[key]=displayDefaults[key];applyDisplay();};
 applyDisplay();
 $('focusMode').onclick=()=>{setPracticeView(!document.body.classList.contains('focus-mode'));render();};
 $('toggleLibrary').onclick=()=>{const open=document.body.classList.toggle('library-open');$('toggleLibrary').setAttribute('aria-expanded',String(open));$('toggleLibrary').textContent=open?'Hide library':'Show library';};

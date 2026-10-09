@@ -2,7 +2,7 @@
 
 A static GitHub Pages practice room with a persistent score library. The original Black Is the Color accompaniment remains included. No account, server, analytics, or score uploads.
 
-Sharp and flat noteheads appear purple, including alterations supplied by the key signature. Natural notes retain their normal color. During playback, altered noteheads stay purple while the current note stem follows the hand highlight color.
+Every note to play now is highlighted in one colour (orange by default) in both hands; choose each hand in its own colour if you prefer. Sharps and flats from the key signature and accidentals against it (including naturals that cancel the key) get separate, customizable colours, or colour only the accidentals, or none. A current note is entirely the highlight colour, with a thin outline in its accidental colour.
 
 ## Compact practice view
 

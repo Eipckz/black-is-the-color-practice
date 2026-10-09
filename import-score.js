@@ -1,5 +1,5 @@
 // Local MusicXML reading. No uploads or external conversion service.
-import {measureStarts} from './engine.js?v=6';
+import {measureStarts,keyAlter} from './engine.js?v=7';
 const text=(node,selector,fallback='')=>node.querySelector(selector)?.textContent.trim()??fallback;
 const number=(node,selector,fallback)=>Number(text(node,selector,String(fallback)));
 const children=(node,name)=>Array.from(node.children).filter(n=>n.localName===name);
@@ -81,7 +81,6 @@ export function segmentNotes(notes,starts){
 }
 const fraction=value=>{let denominator=1;while(denominator<100000&&Math.abs(value*denominator-Math.round(value*denominator))>1e-5)denominator++;return `${Math.round(value*denominator)}/${denominator}`;};
 const keyNames=['Cb','Gb','Db','Ab','Eb','Bb','F','C','G','D','A','E','B','F#','C#'];
-const keyAlter=(step,fifths)=>((fifths>0?'FCGDAEB':'BEADGCF').slice(0,Math.abs(fifths)).includes(step)?Math.sign(fifths):0);
 const powers=[1/16,1/8,1/4,1/2,1,2,4,8,16];
 const plain=d=>powers.some(p=>[1,1.5,1.75].some(dot=>Math.abs(d-p*dot)<1e-5));
 // Playback durations alone do not tell abcjs to engrave a tuplet. A duration that no plain or dotted

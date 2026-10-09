@@ -1,3 +1,5 @@
+// Alteration a key signature gives a step: 1 sharp, -1 flat, 0 none.
+export const keyAlter=(step,fifths)=>((fifths>0?'FCGDAEB':'BEADGCF').slice(0,Math.abs(fifths)).includes(step)?Math.sign(fifths):0);
 export const noteName = n => ['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'][n%12]+(Math.floor(n/12)-1);
 export const frequency = n => 440*Math.pow(2,(n-69)/12);
 // Absolute start of every measure in quarter-note beats, followed by the end of the piece. Meters may change.
