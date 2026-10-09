@@ -28,7 +28,9 @@ export function detectPitch(input,sampleRate,minHz=35,maxHz=500){
  const hz=sampleRate/refined,midiFloat=69+12*Math.log2(hz/440);
  return {midi:Math.round(midiFloat),cents:Math.round((midiFloat-Math.round(midiFloat))*100),hz,rms,confidence:1-center};
 }
-export function acceptPitch(detected,target,stableMs){return detected.midi===target&&detected.confidence>=.85&&Math.abs(detected.cents||0)<=40&&stableMs>=160;}
+// 'exact', 'octave' (accepted only under the tolerance: 'low' = targets below C3, where phone mics
+// lose the fundamental, or 'any'), or false.
+export function acceptPitch(detected,target,stableMs,tolerance='strict'){if(detected.confidence<.85||Math.abs(detected.cents||0)>40||stableMs<160)return false;if(detected.midi===target)return 'exact';return Math.abs(detected.midi-target)===12&&(tolerance==='any'||tolerance==='low'&&target<48)?'octave':false;}
 
 export function validateProgress(data){
  if(!data||data.song!=='Black Is the Color'||!data.records||typeof data.records!=='object'||Array.isArray(data.records))throw new Error('Choose a progress file exported from this practice page.');

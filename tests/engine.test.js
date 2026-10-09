@@ -6,3 +6,14 @@ test('no rest or chord voice slips into left-only pitch targets',()=>{assert.equ
 test('every single bass pitch detected in a synthetic piano-like harmonic signal',()=>{for(const note of [28,35,36,38,40,43,45]){const sr=12000,n=2048,hz=frequency(note),signal=Float32Array.from({length:n},(_,i)=>.16*Math.sin(2*Math.PI*hz*i/sr)+.1*Math.sin(4*Math.PI*hz*i/sr)+.045*Math.sin(6*Math.PI*hz*i/sr));let detected=detectPitch(signal,sr);assert.equal(detected.midi,note,JSON.stringify(detected));assert.ok(acceptPitch(detected,note,180));assert.ok(!acceptPitch(detected,note+12,180));}});
 test('silence and unstable matches cannot count as correct',()=>{assert.equal(detectPitch(new Float32Array(2048),12000).midi,null);assert.ok(!acceptPitch({midi:40,confidence:.99,cents:0},40,50));assert.ok(!acceptPitch({midi:40,confidence:.5,cents:0},40,200));});
 test('mixed rounds never immediately repeat the same section and revisit weaknesses',()=>{const n=nextLesson({},'learn',{section:0,hand:'left'},2);assert.notEqual(n.section,0);const records={};for(let s=0;s<6;s++)for(const h of ['left','right'])records[s+':'+h]={attempts:4,clean:2};records['4:left']={attempts:2,clean:0};assert.deepEqual(nextLesson(records,'learn',{section:1},10),{section:4,hand:'left'});});
+test('octave tolerance accepts an octave error only where allowed, and reports it',()=>{
+ const heard=midi=>({midi,confidence:.95,cents:5});
+ assert.equal(acceptPitch(heard(40),40,200,'low'),'exact');
+ assert.equal(acceptPitch(heard(52),40,200),false,'strict by default');
+ assert.equal(acceptPitch(heard(52),40,200,'low'),'octave','E2 heard as E3 below C3');
+ assert.equal(acceptPitch(heard(28),40,200,'low'),'octave','an octave below is also accepted');
+ assert.equal(acceptPitch(heard(62),50,200,'low'),false,'D3 is not below C3');
+ assert.equal(acceptPitch(heard(62),50,200,'any'),'octave');
+ assert.equal(acceptPitch(heard(47),40,200,'any'),false,'other intervals never pass');
+ assert.equal(acceptPitch({midi:52,confidence:.6,cents:0},40,200,'any'),false,'confidence still applies');
+});

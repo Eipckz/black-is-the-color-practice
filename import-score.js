@@ -1,5 +1,5 @@
 // Local MusicXML reading. No uploads or external conversion service.
-import {measureStarts,keyAlter} from './engine.js?v=7';
+import {measureStarts,keyAlter} from './engine.js?v=8';
 const text=(node,selector,fallback='')=>node.querySelector(selector)?.textContent.trim()??fallback;
 const number=(node,selector,fallback)=>Number(text(node,selector,String(fallback)));
 const children=(node,name)=>Array.from(node.children).filter(n=>n.localName===name);

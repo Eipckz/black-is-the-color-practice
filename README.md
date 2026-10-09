@@ -113,6 +113,20 @@ Outline upcoming notes (off by default) adds a dashed outline to the next entry.
 
 Auto-scroll follows the active system during playback and count-in practice; it follows the score's clock, not microphone performance. Toggle it independently of highlighting. Tap a written note or rest to seek, or use Previous notes / Next notes to study each entry while paused. These controls preserve the chosen section and tempo. Settings are saved on this device.
 
+## Practicing without a MIDI piano
+
+Choose **On-screen keyboard** as the MIDI input (it is listed first, and it is the only input in browsers without Web MIDI such as iPad Safari and Firefox). Tap the keys under Note-by-note guide & keyboard, or use the computer keys A W S E D F T G Y H U J K for C4 to C5, with Z and X to change octave. Wait mode and the timed check then work exactly as with a piano. Keys pressed during the count-in are ignored by the timed check.
+
+The microphone check follows the hand you are practicing (choose one hand; it does not work in both-hands mode). A live Heard readout shows the detected note and cents whenever the pitch is clear. Octave check: phone microphones often lose the fundamental below C3 and report the octave above, so by default an octave error is accepted below C3 and reported as "octave uncertain"; choose exact octave or any octave instead. **Test detection with a built-in tone** runs the first left-hand targets of the section through the same analyser and pitch detector with a silent generated tone, with no microphone or permission, and reports "Detection chain OK" or the note that failed.
+
+## Testing your piano and microphone
+
+Automated tests and the on-screen keyboard cover the MIDI and pitch logic; your own hardware still needs a quick check:
+
+1. **Casio PX-330 over USB, desktop Chrome or Edge.** Connect MIDI piano: the list shows CASIO USB-MIDI. Press a key: Keys held shows it. Built-in piece, bars 1–2, both hands, Wait for my notes: hold E2 and play E3 and the target moves past bar 1 beat 1. Check notes & rhythm at 50 BPM with a one-bar count-in: playing with the clicks gives mostly on time; stopping early reports the remaining attacks as missed.
+2. **Phone microphone on HTTPS.** Left hand, bars 1–2, Start note check: Heard shows E2 while you hold E2; release, then play B1 and the target advances. If Heard shows E3 for E2, keep Octave check on "below C3".
+3. **Both.** Switching to another tab and back stops the check by design; start it again.
+
 ## Casio USB MIDI
 
 Connect the PX-330 USB-B port to a computer and select its MIDI input after granting permission. Desktop Chrome or Edge is the recommended starting point. The app requests no SysEx access and sends no MIDI output. Use the piano's own sound, including through headphones. The input list updates when devices connect or disconnect, with a channel selector for routing. Pedal does not count as physically holding a key.

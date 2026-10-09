@@ -19,19 +19,31 @@ export function midiTargets(events){
  return beats.map(beat=>({beat,notes:[...new Set(events.filter(e=>e.beat<=beat&&beat<e.beat+e.duration).flatMap(e=>e.notes))].sort((a,b)=>a-b),attacks:[...new Set(events.filter(e=>e.beat===beat).flatMap(attacksFor))]}));
 }
 export function matchesTarget(target,held,attacks){return held.length===target.notes.length&&target.notes.every(n=>held.includes(n))&&target.attacks.every(n=>attacks.has(n));}
+// A MIDI input fed by the on-screen or computer keyboard, so wait mode and the timed check work
+// without hardware or Web MIDI support.
+export class VirtualMidiInput {
+ constructor(){Object.assign(this,{id:'virtual',name:'On-screen keyboard',manufacturer:'',state:'connected',onmidimessage:null});}
+ async open(){}
+ async close(){}
+ send(data){this.onmidimessage?.({data});}
+}
 export class MidiConnection {
- constructor({onPorts,onMessage,onLost}){Object.assign(this,{onPorts,onMessage,onLost});this.access=null;this.input=null;this.generation=0;}
- async connect(request){const generation=++this.generation;const access=await request({sysex:false});if(generation!==this.generation)return;this.access=access;access.onstatechange=()=>this.refresh();this.refresh();}
- refresh(){if(this.input&&this.input.state==='disconnected'){this.input.onmidimessage=null;this.input=null;this.onLost();}this.onPorts([...this.access.inputs.values()].filter(p=>p.state==='connected'),this.input?.id);}
- async select(id){const generation=++this.generation;if(this.input){this.input.onmidimessage=null;await this.input.close();}this.input=null;this.onLost();const input=this.access?.inputs.get(id);if(!input||input.state!=='connected')return;await input.open();if(generation!==this.generation){await input.close();return;}this.input=input;input.onmidimessage=e=>this.onMessage(e.data);}
+ constructor({onPorts,onMessage,onLost}){Object.assign(this,{onPorts,onMessage,onLost});this.access=null;this.input=null;this.generation=0;this.virtual=new VirtualMidiInput();}
+ // Without a request function (no Web MIDI), only the virtual input is listed.
+ async connect(request){const generation=++this.generation;const access=request?await request({sysex:false}):null;if(generation!==this.generation)return;this.access=access;if(access)access.onstatechange=()=>this.refresh();this.refresh();}
+ refresh(){if(this.input&&this.input.state==='disconnected'){this.input.onmidimessage=null;this.input=null;this.onLost();}this.onPorts([this.virtual,...(this.access?[...this.access.inputs.values()].filter(p=>p.state==='connected'):[])],this.input?.id);}
+ // silent: a switch the user chose, so the app need not report a lost connection.
+ async select(id,silent=false){const generation=++this.generation;if(this.input){this.input.onmidimessage=null;await this.input.close();}this.input=null;this.onLost(silent);const input=id==='virtual'?this.virtual:this.access?.inputs.get(id);if(!input||input.state!=='connected')return;await input.open();if(generation!==this.generation){await input.close();return;}this.input=input;input.onmidimessage=e=>this.onMessage(e.data);}
  disconnect(){this.generation++;if(this.input){this.input.onmidimessage=null;this.input.close().catch(()=>{});}if(this.access)this.access.onstatechange=null;this.input=null;this.access=null;this.onLost();}
 }
 
 // Onset windows in seconds, scaled with tempo and bounded for usability.
 export function timingWindow(tempo,level='balanced'){const factors={relaxed:.35,balanced:.25,tighter:.15};return Math.max(.09,Math.min(.3,(60/tempo)*(factors[level]??.25)));}
 export class RhythmCheck {
- constructor(events,tempo,level){this.window=timingWindow(tempo,level);this.seconds=60/tempo;this.expected=events.flatMap(e=>attacksFor(e).map(note=>({note,time:e.beat*this.seconds,matched:false})));this.wrong=0;this.stray=0;this.hits=[];}
+ constructor(events,tempo,level){this.window=timingWindow(tempo,level);this.seconds=60/tempo;this.expected=events.flatMap(e=>attacksFor(e).map(note=>({note,time:e.beat*this.seconds,matched:false})));this.first=Math.min(...this.expected.map(e=>e.time));this.wrong=0;this.stray=0;this.hits=[];}
  hit(note,time){
+  // Keys pressed during the count-in are not early attempts at the first note.
+  if(time<this.first-this.window)return {kind:'ignored',note};
   const candidates=this.expected.filter(e=>!e.matched&&e.note===note&&Math.abs(e.time-time)<=Math.max(.65,this.window*2));
   candidates.sort((a,b)=>Math.abs(a.time-time)-Math.abs(b.time-time));const target=candidates[0];
   if(!target){if(this.expected.some(e=>Math.abs(e.time-time)<=this.window))this.wrong++;else this.stray++;return {kind:'extra',note};}

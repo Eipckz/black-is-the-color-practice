@@ -1,4 +1,4 @@
-import {measureAt,keyAlter} from './engine.js?v=7';
+import {measureAt,keyAlter} from './engine.js?v=8';
 // Map the written accompaniment to abcjs voice/measure/note groups. Pass the measure length, or the
 // measure starts of a score whose meter changes.
 export function makeCues(events, hand, start, measures=4){

@@ -8,3 +8,20 @@ test('full score ideal MIDI performance has no misses or extra ending attacks',(
 test('timing tolerance is ordered and bounded',()=>{for(const bpm of [30,50,90]){assert.ok(timingWindow(bpm,'tighter')<=timingWindow(bpm));assert.ok(timingWindow(bpm)<=timingWindow(bpm,'relaxed'));assert.ok(timingWindow(bpm)<=.3);}assert.equal(timingWindow(60),.25);});
 test('MIDI connection binds input only, handles unplugging, and closes cleanly',async()=>{let lost=0,messages=0,options;const input={id:'casio',name:'CASIO USB-MIDI',state:'connected',open:async()=>{},close:async()=>{}};const access={inputs:new Map([['casio',input]])};const c=new MidiConnection({onPorts:()=>{},onMessage:()=>messages++,onLost:()=>lost++});await c.connect(async o=>{options=o;return access;});assert.equal(options.sysex,false);await c.select('casio');input.onmidimessage({data:[144,40,80]});assert.equal(messages,1);input.state='disconnected';access.onstatechange();assert.equal(c.input,null);assert.equal(input.onmidimessage,null);assert.ok(lost>=2);c.disconnect();assert.equal(access.onstatechange,null);});
 test('disconnect while permission is pending does not reconnect',async()=>{let resolve;const c=new MidiConnection({onPorts:()=>{},onMessage:()=>{},onLost:()=>{}});const pending=c.connect(()=>new Promise(r=>resolve=r));c.disconnect();resolve({inputs:new Map()});await pending;assert.equal(c.access,null);});
+test('timed check ignores attacks made during the count-in',()=>{
+ const r=new RhythmCheck([{beat:4,notes:[40]},{beat:5,notes:[43]}],60,'balanced');
+ assert.equal(r.hit(40,1).kind,'ignored');assert.equal(r.hit(40,3.5).kind,'ignored');
+ assert.equal(r.hit(40,3.9).kind,'on time');assert.deepEqual([r.summary().extra,r.summary().wrong],[0,0]);
+});
+test('the virtual input is listed first, works without Web MIDI, and round-trips through MidiKeys',async()=>{
+ const {VirtualMidiInput}=await import('../midi.js');
+ const keys=new MidiKeys();let ports=[],lost=[];
+ const c=new MidiConnection({onPorts:p=>ports=p,onMessage:data=>keys.read(data),onLost:silent=>lost.push(silent)});
+ await c.connect(null);assert.deepEqual(ports.map(p=>p.id),['virtual']);assert.ok(c.virtual instanceof VirtualMidiInput);
+ await c.select('virtual',true);assert.equal(c.input,c.virtual);assert.deepEqual(lost,[true],'a chosen switch is silent');
+ c.virtual.send([144,40,100]);c.virtual.send([144,52,100]);assert.deepEqual(keys.notes(),[40,52]);
+ c.virtual.send([128,40,0]);assert.deepEqual(keys.notes(),[52]);
+ const input={id:'casio',name:'CASIO USB-MIDI',state:'connected',open:async()=>{},close:async()=>{}};
+ await c.connect(async()=>({inputs:new Map([['casio',input]])}));assert.deepEqual(ports.map(p=>p.id),['virtual','casio']);
+ c.disconnect();assert.equal(lost.at(-1),undefined);
+});
