@@ -146,3 +146,9 @@ html{scroll-padding-top:120px}
 .tap #tapStart{width:100%}
 @media print{.keyboard-strip,.auto-hint{display:none!important}}
 @media(prefers-reduced-motion:reduce){.tap-button.pulse{animation:none}}
+/* Intermediate tools */
+#notation .flag-marker{fill:#c2410c;font:700 11px Arial,Helvetica,sans-serif;pointer-events:none}
+#notation .loop-bracket{fill:var(--rh);opacity:.55;pointer-events:none}
+#flagMeasure[aria-pressed=true]{background:#fde7d9;border-color:#c2410c}
+:root[data-theme=dark] #flagMeasure[aria-pressed=true]{background:#4a2a1a}
+@media print{#notation .loop-bracket{display:none}}

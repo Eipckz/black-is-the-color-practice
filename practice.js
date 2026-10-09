@@ -1,4 +1,4 @@
-import {defaults,validate} from './settings.js?v=2';
+import {defaults,validate} from './settings.js?v=3';
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {
   const sections = [];
@@ -35,6 +35,8 @@ export function freshState(saved={}, sections, measures, pieceDefaults={}) {
   for(const p of phases.slice(0,3))if(!Number.isInteger(state.targets[p])||state.targets[p]<1||state.targets[p]>10000)state.targets[p]=12;
   for(const key of ['customStart','customEnd'])state[key]=Number.isInteger(state[key])?Math.max(1,Math.min(measures,state[key])):1;
   if(state.customStart>state.customEnd)state.customEnd=state.customStart;
+  // Trouble-spot flags: measure numbers the player marked.
+  state.flags=[...new Set((Array.isArray(state.flags)?state.flags:[]).filter(m=>Number.isInteger(m)&&m>=1&&m<=measures))].sort((a,b)=>a-b);
   const notes=state.notes&&typeof state.notes==='object'&&!Array.isArray(state.notes)?state.notes:{};
   state.notes=Object.fromEntries(Object.entries(notes).filter(([k,v])=>recordKeyPattern.test(k)&&typeof v==='string'&&v).map(([k,v])=>[k,v.slice(0,2000)]));
   Object.assign(state,state.stages[phase]);
@@ -54,9 +56,22 @@ export function chooseLesson(state, sections, measures){
   if(other.length)candidates=other;
   // Strict alternation switches hands every separate-hands round, even when the other hand is stronger.
   if(state.phase==='learn'&&state.learnOrder==='alternate'){const switched=candidates.filter(c=>c.hand!==state.hand);if(switched.length)candidates=switched;}
-  const priority=c=>{const r=state.records[recordKey(state,c.section,c.hand)]||{};return (r.clean||0)*4+(r.attempts||0)*.5;};
+  // Flagged trouble spots count as two points weaker, so they come back sooner.
+  const flagged=c=>(state.flags||[]).some(m=>m>=sections[c.section].start&&m<=sections[c.section].end);
+  const priority=c=>{const r=state.records[recordKey(state,c.section,c.hand)]||{};return (r.clean||0)*4+(r.attempts||0)*.5-(flagged(c)?2:0);};
   // Equal-priority passages: jump across the piece (default), stay with neighbouring passages, or go in order.
   const nextSection=((state.section%count)+Math.max(1,Math.floor(count/2)))%count;
   const distance=state.interleave==='near'?c=>Math.abs(c.section-state.section):state.interleave==='order'?c=>(c.section-state.section-1+count)%count:c=>(c.section-nextSection+count)%count;
   return candidates.sort((a,b)=>priority(a)-priority(b)||distance(a)-distance(b)||Number(a.hand===state.hand)-Number(b.hand===state.hand))[0];
+}
+// Loop points inside a section, in section-relative beats. The first chosen note sets A; the second
+// sets B at the end of the later note, so the loop always covers both notes whichever comes first.
+export function nextLoopPoints(points={},start,end){
+  if(points.a==null||points.b!=null)return {a:start,aEnd:end,b:null};
+  return start>=points.a?{a:points.a,aEnd:points.aEnd,b:Math.max(end,points.aEnd)}:{a:start,aEnd:end,b:points.aEnd};
+}
+export function loopRange(points={},total){
+  if(points.a==null)return {a:0,b:total};
+  const a=Math.max(0,Math.min(points.a,total)),b=Math.min(total,points.b??total);
+  return b-a>1e-6?{a,b}:{a:0,b:total};
 }

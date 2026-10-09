@@ -25,6 +25,14 @@ All of these are in Settings and switched on by the Beginner preset:
 - **Counting labels**: with eighth-note metronome clicks the beat indicator reads 1 & 2 & …; compound meters show six (or nine, twelve) boxes with each group's first beat accented.
 - **Starting hint**: the section's hint is shown above the score for a passage's first three rounds.
 
+## Tools for intermediate players
+
+- **Trouble-spot flags**: ⚑ Flag measure (next to Previous/Next notes) marks the measure at the playing position. Flags show above the staff and in the practice map, passages containing them come back sooner in the round order, and they are saved in backups.
+- **Loop points**: shift-click (or long-press on a touchscreen) a note to set the loop start, then a later note to set the end. Play, Loop and the position slider stay between them; a bracket marks the span. Clear loop restores the whole section; changing section clears it too. Timed checks always cover the whole section.
+- **Loop and accelerate** (Settings, Practice flow): each loop pass is one tempo step faster, up to the tempo ramp target; the status line shows the pass tempo.
+- **Metronome pattern** (Sound & playback): every click, only the first beat of each measure, or silent every second measure, so you keep the pulse yourself.
+- **Fade a hand out** (Sound & playback): in Mix & combine, each clean round lowers the chosen hand's playback by 20%, so you take that hand over gradually.
+
 ## Settings
 
 Open **⚙ Settings** in the header (or press the comma key) for every option, grouped into Score, Sound & playback, Practice flow, Display, Shortcuts and Your data. Each control is tagged **this piece** (saved with the piece's progress) or **all pieces** (saved for this device: theme, colours, text size, microphone octave check, daily goal, shortcuts). The Sound & quick settings panel under the score keeps only what you change mid-practice: volume, hand balance with Hear LH / RH / Both, count-in and metronome.

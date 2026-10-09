@@ -29,6 +29,8 @@ export const settings=[
  // Sound & playback
  select('countBars','piece','sound','Count-in',1,[[0,'None'],[1,'1 bar'],[2,'2 bars']]),
  select('metronomeSub','piece','sound','Metronome clicks','beat',[['beat','Each beat'],['eighth','Each eighth note']]),
+ select('metronomeMode','piece','sound','Metronome pattern','steady',[['steady','Every click'],['accents','Only the first beat of each measure'],['silent','Silent every second measure']],'none',{help:'Fewer clicks make you keep the pulse yourself.'}),
+ select('fadeHand','piece','sound','Fade a hand out in hands-together rounds','off',[['off','Off'],['left','Left hand'],['right','Right hand']],'none',{help:'Each clean Mix & combine round lowers that hand’s playback by 20%, so you gradually take it over.'}),
  select('micOctaveTolerance','device','sound','Microphone octave check','low',[['strict','Exact octave only'],['low','Allow an octave error below C3'],['any','Allow any octave error']],'none',{help:'Phone microphones often hear low notes an octave high.'}),
  // Practice flow
  select('sectionSize','piece','practice','Section size',2,[[1,'1 measure'],[2,'2 measures'],[4,'4 measures']],'sections',{help:'Imported pieces only. Each size keeps its own records.'}),
@@ -38,6 +40,7 @@ export const settings=[
  check('autoSlow','piece','practice','Slow down one tempo step after “Needs a slow retry”',true),
  check('tempoRamp','piece','practice','Tempo ramp: raise a passage one step after two clean rounds',false,'render'),
  range('rampTarget','piece','practice','Tempo ramp target',80,30,180,1,'render',{unit:' BPM',help:'Starts at the marked tempo when the score has one.'}),
+ check('loopAccelerate','piece','practice','Speed up one tempo step on each loop pass',false,'none',{help:'Stops at the tempo ramp target.'}),
  check('autoHint','piece','practice','Show the starting hint for a passage’s first three rounds',false,'render'),
  {key:'dailyGoal',scope:'device',group:'practice',label:'Daily practice goal (minutes, 0 = off)',type:'number',default:0,min:0,max:600,step:5,refresh:'estimate'},
  // Display

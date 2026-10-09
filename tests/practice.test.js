@@ -77,3 +77,18 @@ test('tempo ladder and notes settings are validated',()=>{
   assert.deepEqual(Object.keys(s.notes),['0:left','4/2:right']);assert.equal(s.notes['0:left'].length,2000);
   assert.equal(freshState({},sections,12).autoSlow,true);
 });
+
+test('flagged trouble spots come back sooner and flags are validated',async()=>{
+  const parts=makeSections(30),s=freshState({phase:'mix',flags:[21,21,99,'x',0]},parts,30);
+  assert.deepEqual(s.flags,[21]);
+  s.section=5;assert.equal(chooseLesson(s,parts,30).section,10,'measure 21 is in passage 11');
+  s.records['10:both']={attempts:1,clean:1};assert.notEqual(chooseLesson(s,parts,30).section,10,'one clean return outweighs the flag');
+});
+test('loop points cover both chosen notes in either order and fall back to the whole section',async()=>{
+  const {nextLoopPoints,loopRange}=await import('../practice.js');
+  let p=nextLoopPoints({},2,2.5);assert.deepEqual(loopRange(p,8),{a:2,b:8},'A alone loops to the end');
+  p=nextLoopPoints(p,5,6);assert.deepEqual(loopRange(p,8),{a:2,b:6});
+  assert.deepEqual(loopRange(nextLoopPoints(nextLoopPoints({},5,6),1,1.5),8),{a:1,b:6},'reverse order');
+  assert.deepEqual(nextLoopPoints(p,3,4).b,null,'a third choice starts again');
+  assert.deepEqual(loopRange({},8),{a:0,b:8});assert.deepEqual(loopRange({a:9,b:12},8),{a:0,b:8},'stale points are ignored');
+});
