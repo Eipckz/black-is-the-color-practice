@@ -3,8 +3,9 @@ import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWind
 import {makeCues,cueState,stepBeat,alteredNoteHeads} from './follower.js?v=10';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
-import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js?v=8';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=14';
+import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections} from './practice.js?v=9';
+import {renderWindow,contextMeasures,lineBars} from './view.js?v=1';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=16';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore} from './library.js?v=11';
 let score=builtinScore, activeId=BUILTIN, library=[], beatsPerMeasure=4, pulse=1, pulsesPerMeasure=4;
 import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress} from './engine.js?v=5';
@@ -22,7 +23,7 @@ const builtinSections=[
 ];
 builtinSections.push({name:'Your measure range',start:1,end:2,goal:'Work on exactly the transition you need. Keep the score visible and the pulse steady.',hint:'Look at the starting bass note and prepare the right-hand chord before counting in.'});
 let sections=builtinSections, storageKey=progressKey(activeId), state;
-function loadState(){let stored={};try{stored=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{}state=freshState(stored,sections,score.measures);state.practiceTiming=timingState(stored.practiceTiming);}
+function loadState(){let stored={};try{stored=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{}state=freshState(stored,sections,score.measures);if(!Object.hasOwn(stored,'pageMeasures')&&matchMedia('(max-width:600px)').matches)state.pageMeasures=4;state.practiceTiming=timingState(stored.practiceTiming);}
 loadState();
 let midiPractice=null,midiRhythm=null;
 let cues=[],cueNodes=new Map(),followLine=null;
@@ -33,7 +34,13 @@ const section=()=>sections[state.section];
 function handLabel(){return state.hand==='left'?'Left hand':state.hand==='right'?'Right hand':'Both piano hands';}
 function rawMeasures(id){return score.abc.split('\n').filter(l=>l.startsWith('[V:'+id+']')).flatMap(l=>l.replace(/^\[V:[^\]]+\]\s*/,'').replace(/\|\]/g,'|').split('|').filter(x=>x.trim()));}
 function largeScore(){return state.scoreSize==='large'||window.matchMedia('(max-width:600px)').matches;}
-function excerpt(){if(score.imported)return importedExcerpt(score,state.hand,section().start,section().end,largeScore());const ids=state.hand==='left'?['LH']:state.hand==='right'?['RH']:['RH','LH'];let h='X:1\nT:Measures '+section().start+'–'+section().end+' · '+handLabel()+'\nM:4/4\nL:1/8\n%%score '+(ids.length===2?'{ RH LH }':ids[0])+'\n%%barsperstaff '+(largeScore()?1:2)+'\n%%staffwidth '+(largeScore()?300:540)+'\n%%titlefont Georgia 16\n%%stretchlast 1\n';for(const id of ids)h+='V:'+id+' clef=bass name="'+id+'"\n';h+='K:Em\n';for(const id of ids){let bars=rawMeasures(id).slice(section().start-1,section().end).map(x=>x.replace(/!>[()]!/g,'').replace(/[()]/g,''));h+='[V:'+id+'] '+bars.join(' | ')+' |]\n';}return h;}
+const scoreWindow=()=>renderWindow(score.measures,section(),state);
+// Wider staves only when more than two measures share a line; abcjs scales the SVG to the container.
+function layout(w){const bars=largeScore()?1:Math.min(lineBars(state.barsPerLine,innerWidth),w.end-w.start+1);return {bars,width:largeScore()?300:bars>2?Math.max(540,$('notation').clientWidth-20):540};}
+function excerpt(w,{bars,width}){if(score.imported)return importedExcerpt(score,state.hand,w.start,w.end,largeScore(),{bars,width});const ids=state.hand==='left'?['LH']:state.hand==='right'?['RH']:['RH','LH'];let h='X:1\nT:Measures '+w.start+'–'+w.end+' · '+handLabel()+'\nM:4/4\nL:1/8\n%%score '+(ids.length===2?'{ RH LH }':ids[0])+'\n%%barsperstaff '+bars+'\n%%staffwidth '+width+'\n%%titlefont Georgia 16\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n';for(const id of ids)h+='V:'+id+' clef=bass name="'+id+'"\n';h+='K:Em\n';for(const id of ids){let bars=rawMeasures(id).slice(w.start-1,w.end).map(x=>x.replace(/!>[()]!/g,'').replace(/[()]/g,''));h+='[V:'+id+'] '+bars.join(' | ')+' |]\n';}return h;}
+// abcjs 6.6.4 numbers systems only when %%setbarnb is not 1 and miscounts later systems,
+// so excerpts always set 2 and each system is labelled here from its measure class.
+function decorateScore(w){const n=$('notation');n.style.setProperty('--dim',state.contextDim/100);for(const t of n.querySelectorAll('.abcjs-bar-number'))t.textContent=w.start+Number(t.getAttribute('class').match(/abcjs-mm(\d+)/)[1]);for(const m of contextMeasures(w,section()))n.querySelectorAll('.abcjs-mm'+(m-w.start)).forEach(e=>e.classList.add('context'));}
 function fingers(e){if(score.imported)return e.fingers.filter(Boolean).join(' + ');if(e.voice==='left')return e.fingers.join(' + ');const n=e.notes.join(',');const single={52:'1',47:'1',57:'1',55:'1',54:'1',48:'1'};const chords={'55,59':'3 + 5','50,54':'3 + 5','60,64':'3 + 5','57,62':'2 + 5','59,64':'3 + 5','52,55,59':'1 + 3 + 5','50,55,59':'1 + 3 + 5','52,55':'3 + 5'};return e.notes.length===1?single[n]||'':chords[n]||'';}
 function render(){
  renderEstimate();
@@ -43,8 +50,9 @@ function render(){
  $('lessonTitle').textContent=section().name+' · '+handLabel();$('lessonGoal').textContent=section().goal;
  $('recallPrompt').textContent=state.phase==='learn'?'With the score open: find the first note, its finger, and the first rest.':'With the score open: prepare this section’s first hand position, then start here.';$('hint').textContent=section().hint;$('hint').hidden=true;$('showHint').hidden=false;
  $('scoreWrap').hidden=false;for(const name of ['showCueGuide','autoFollow'])$(name).checked=state[name]??true;$('highlightMode').value=state.highlightMode||'notes';$('cueGuide').hidden=!$('showCueGuide').checked;
- document.body.classList.toggle('short-excerpt',section().end-section().start<2);
- try{ABCJS.renderAbc('notation',document.body.classList.contains('focus-mode')?excerpt().replace(/^T:.*\n/m,''):excerpt(),{responsive:'resize',staffwidth:largeScore()?300:540,add_classes:true,paddingright:10,paddingleft:10});bindCues();}catch(error){$('notation').textContent='Notation could not render. Use the PDF download below.';console.error(error);}
+ for(const id of ['scoreView','pageMeasures','barsPerLine'])$(id).value=String(state[id]);$('pageMeasures').disabled=state.scoreView!=='page';$('contextDim').value=state.contextDim;$('contextDimLabel').textContent=state.contextDim+'%';
+ document.body.classList.toggle('short-excerpt',state.scoreView==='section'&&section().end-section().start<2);
+ try{const w=scoreWindow(),size=layout(w),abc=excerpt(w,size);ABCJS.renderAbc('notation',document.body.classList.contains('focus-mode')?abc.replace(/^T:.*\n/m,''):abc,{responsive:'resize',staffwidth:size.width,add_classes:true,paddingright:10,paddingleft:10});decorateScore(w);bindCues(w);}catch(error){$('notation').textContent='Notation could not render. Use the PDF download below.';console.error(error);}
  $('noteGuide').replaceChildren();const events=eventsFor(score,state.hand,section().start,section().end);
  for(let m=section().start;m<=section().end;m++){const row=document.createElement('div');row.className='note-row';const title=document.createElement('strong');title.textContent='Bar '+m;row.append(title);const text=document.createElement('div');for(const e of events.filter(e=>Math.floor((e.beat+1e-6)/beatsPerMeasure)+1===m)){const line=document.createElement('div');let beat=e.beat%beatsPerMeasure+1,where=Number.isInteger(beat)?'Beat '+beat:'Beat '+Number(beat.toFixed(3));line.textContent=(state.hand==='both'?(e.voice==='left'?'LH ':'RH '):'')+where+': '+(e.notes.length?e.notes.map(noteName).join(' + '):'rest')+' · '+e.duration+' beat'+(e.duration===1?'':'s')+(e.notes.length&&fingers(e)?' · fingers '+fingers(e):'');text.append(line);}row.append(text);$('noteGuide').append(row);}
  $('feedback').textContent=state.rated?'This round is logged. Choose the next round button below when you are ready.':'A clean attempt means correct notes, the written rests, steady counting, and the chosen fingering.';document.querySelectorAll('[data-rating]').forEach(b=>b.disabled=!!state.rated);$('next').textContent=state.phase==='perform'?'Start another play-through →':'Next practice round →';renderProgress();renderPlan();
@@ -57,9 +65,13 @@ function updatePosition(beat){const total=(section().end-section().start+1)*beat
 function selectedEvents(){let events=eventsFor(score,state.hand,section().start,section().end);if($('melody').checked)events=events.concat(eventsFor(score,'melody',section().start,section().end));return events;}
 function voiceLevel(voice){return voice==='left'?(state.leftVolume??70)/100:voice==='right'?(state.rightVolume??80)/100:.65;}
 function highlight(notes=[],hand='right'){document.querySelectorAll('#keyboard button').forEach(k=>{k.classList.toggle('lit',notes.includes(Number(k.dataset.note)));k.classList.toggle('left',hand==='left');});}
-function bindCues(){
- cues=makeCues(eventsFor(score,state.hand,section().start,section().end),state.hand,section().start,beatsPerMeasure);cueNodes=new Map();
- for(const cue of cues){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';node.onclick=()=>seekTo(cue.beat-(section().start-1)*beatsPerMeasure);
+// Every rendered note is a cue; only those inside the section drive highlighting and stepping.
+// Tapping a dimmed context note turns its measure into a one-bar practice range.
+function bindCues(w){
+ const first=(section().start-1)*beatsPerMeasure,last=section().end*beatsPerMeasure,all=makeCues(eventsFor(score,state.hand,w.start,w.end),state.hand,w.start,beatsPerMeasure);cueNodes=new Map();
+ cues=all.filter(c=>c.beat>=first-1e-6&&c.beat<last-1e-6);
+ const inside=new Set(cues);
+ for(const cue of all){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';node.onclick=inside.has(cue)?()=>seekTo(cue.beat-first):()=>practiseMeasure(Math.floor((cue.beat+1e-6)/beatsPerMeasure)+1);
  const altered=alteredNoteHeads(cue);for(const head of node.querySelectorAll('.abcjs-notehead')){const name=(head.getAttribute('data-name')||'').replace(/^[=^_]+/,'');const pitch=altered.find(p=>p.name===name);if(pitch){head.classList.add('altered-pitch');head.setAttribute('aria-label',pitch.label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=pitch.label;head.append(title);}}
  }
 }
@@ -124,6 +136,7 @@ $('next').onclick=()=>{if(!state.rated){$('feedback').textContent='Rate your att
 $('exportProgress').onclick=async()=>{save();try{const entries=await listScores();downloadJSON({version:2,activeId,entries,progress:Object.fromEntries([BUILTIN,...entries.map(e=>e.id)].map(id=>[id,JSON.parse(localStorage.getItem(progressKey(id))||'{}')]))},'piano-repertoire-backup.json');$('importStatus').textContent='Library and progress backup downloaded.';}catch(error){$('importStatus').textContent='Backup failed: '+error.message;}};
 let whites=0;for(let n=28;n<=76;n++){const black=[1,3,6,8,10].includes(n%12),key=document.createElement('button');key.dataset.note=n;key.textContent=noteName(n);key.setAttribute('aria-label','Play '+noteName(n));if(black){key.className='black';key.style.left=(whites*30-10)+'px';}else whites++;key.onclick=async()=>{if(micStream)return;$('playStatus').textContent='Keyboard reference: '+noteName(n);try{await audioContext();const generation=playGeneration;await piano.load([n]);if(generation!==playGeneration||micStream)return;piano.note(n,context.currentTime+.01,1,.75);highlight([n]);}catch{$('playStatus').textContent='Audio unavailable.';}};$('keyboard').append(key);}$('keyboard').style.minWidth=(whites*30)+'px';
 
+function practiseMeasure(m){if(state.phase==='perform')return;state.customStart=state.customEnd=m;state.section=sections.length-1;render();$('playStatus').textContent='Practising measure '+m+' on its own. Choose a section to return.';}
 $('applyRange').onclick=()=>{const start=Number($('rangeStart').value),end=Number($('rangeEnd').value);if(start>end){$('rangeError').textContent='The first measure must come before the last measure.';return;}$('rangeError').textContent='';state.customStart=start;state.customEnd=end;state.section=sections.length-1;render();};
 function setPracticeView(compact){document.body.classList.toggle('focus-mode',compact);$('focusMode').setAttribute('aria-pressed',String(compact));$('focusMode').textContent=compact?'Full view':'Compact view';try{localStorage.setItem('piano-compact-view',String(compact));}catch{}}
 try{setPracticeView(localStorage.getItem('piano-compact-view')!=='false');}catch{setPracticeView(true);}
@@ -133,6 +146,8 @@ for(const name of ['volume','leftVolume','rightVolume'])$(name).oninput=()=>{sta
 for(const name of ['volume','leftVolume','rightVolume'])$(name).onchange=()=>{save();if(name!=='volume'&&playing)play(transport.practice,positionBeat,true);};
 $('countBars').onchange=()=>{state.countBars=Number($('countBars').value);save();};
 $('scoreSize').onchange=()=>{state.scoreSize=$('scoreSize').value;render();};
+for(const id of ['scoreView','pageMeasures','barsPerLine'])$(id).onchange=()=>{const v=$(id).value;state[id]=/^\d+$/.test(v)?Number(v):v;render();};
+$('contextDim').oninput=()=>{state.contextDim=Number($('contextDim').value);$('contextDimLabel').textContent=state.contextDim+'%';$('notation').style.setProperty('--dim',state.contextDim/100);};$('contextDim').onchange=save;
 $('seek').oninput=()=>{$('timeLabel').textContent=clockText(Number($('seek').value))+' / '+clockText((section().end-section().start+1)*beatsPerMeasure);};
 $('seek').onchange=()=>seekTo(Number($('seek').value));
 $('importProgress').onchange=restoreBackup;
@@ -217,7 +232,7 @@ async function restoreBackup(event){const file=event.target.files?.[0];if(!file)
 function checkedState(value,parts,measures){
  if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Invalid saved progress.');
  const records={};for(const [key,r] of Object.entries(value.records||{})){if(!/^\d+:(left|right|both)$/.test(key)||Number(key.split(':')[0])>=parts.length||!r||!Number.isInteger(r.attempts)||r.attempts<0||!Number.isInteger(r.clean)||r.clean<0||r.clean>r.attempts)throw new Error('Invalid practice record in backup.');records[key]={attempts:r.attempts,clean:r.clean,last:Number(r.last)||0,tempo:Number(r.tempo)||50,rating:[0,1,2].includes(r.rating)?r.rating:0};}
- const clean={records};for(const key of ['phase','hand','section','stages','targets','tempo','customStart','customEnd','volume','leftVolume','rightVolume','countBars','scoreSize','highlightMode','previewNext','showCueGuide','autoFollow','practiceTiming'])if(Object.hasOwn(value,key))clean[key]=value[key];
+ const clean={records};for(const key of ['phase','hand','section','stages','targets','tempo','customStart','customEnd','volume','leftVolume','rightVolume','countBars','scoreSize','scoreView','pageMeasures','barsPerLine','contextDim','highlightMode','previewNext','showCueGuide','autoFollow','practiceTiming'])if(Object.hasOwn(value,key))clean[key]=value[key];
  const result=freshState(clean,parts,measures);result.practiceTiming=timingState(clean.practiceTiming);return result;
 }
 async function initializeLibrary(){try{library=(await listScores()).map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename,DOMParser,entry.partId||null)};}catch{return entry;}});refreshLibrary();const id=localStorage.getItem('piano-active-score');if(id&&id!==BUILTIN)activateScore(id);}catch{$('libraryStatus').textContent='Browser storage is unavailable. The built-in piece still works; imported scores require browser storage.';}}

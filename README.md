@@ -10,6 +10,10 @@ The default compact view puts the score, transport, live estimate, ratings, and 
 
 Start timer (or playback) measures active practice. Rating pauses the timer; Next practice round starts it again. Hidden tabs and reloads pause timing. After three timed rated rounds of at least ten seconds, the estimate uses recent round durations, remaining stage targets, and a retry allowance from self-ratings. It updates each second during timed practice and persists per piece, including in backups. The displayed range is a heuristic planning range, not a statistically calibrated confidence interval or a prediction of mastery. Existing untimed progress is retained but is not invented timing evidence.
 
+## Page view
+
+By default the score shows the page around the current section: the section stays at full strength and the rest of the page is dimmed, so you can see where the passage sits. Each system shows its real measure number. In Score, sound & practice settings choose **Score view** (current section only, page, or whole piece), **Page size** (4, 8, 12 or 16 measures; phones start at 4), **Measures per line** (auto: 4 on wide screens, 2 up to 900 px, 1 on phones), and how strongly the rest of the page is dimmed (0–90%). Playback, highlighting, Previous/Next notes, MIDI and microphone checks stay inside the section. Tap a dimmed measure to practise that measure on its own.
+
 ## Library and four practice stages
 
 - The library sidebar lists saved pieces and their last practice stage. Select a piece to restore its stage, section, hand, tempo, targets, and progress. On phones the library appears above the workspace.

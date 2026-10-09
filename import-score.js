@@ -88,9 +88,9 @@ function tripletLength(events,index){
   if(!length||!group.every((e,i)=>Math.abs(e.duration-length*2/3)<1e-6&&(!i||Math.abs(e.beat-group[i-1].beat-group[i-1].duration)<1e-6)))return null;
   return length;
 }
-export function importedExcerpt(score,hand,start,end,large=false){
+export function importedExcerpt(score,hand,start,end,large=false,layout={}){
   const ids=hand==='both'?['right','left']:[hand],[beats,beatType]=score.meter.split('/').map(Number),group=beatType===8&&beats%3===0?1.5:1;
-  let abc=`X:1\nT:Measures ${start}-${end}\nM:${score.meter}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${large?1:2}\n%%staffwidth ${large?300:540}\n%%stretchlast 1\n`;
+  let abc=`X:1\nT:Measures ${start}-${end}\nM:${score.meter}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
   for(const id of ids)abc+=`V:${id} clef=${score.clefs[id]} name="${id==='right'?'RH':'LH'}"\n`;
   const openingKey=score.measureKeys?.[start-1]??0;
   abc+='K:'+keyNames[openingKey+7]+'\n';

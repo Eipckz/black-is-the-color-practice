@@ -29,3 +29,6 @@ header{max-width:none;padding:10px 20px;align-items:center;min-height:58px}.head
 /* Keep pitch reminders visible while stems retain the active hand color. */
 #notation .abcjs-notehead.altered-pitch{fill:#7736ad;stroke:none}
 #notation .is-current .abcjs-notehead.altered-pitch{fill:#7736ad;stroke:#7736ad;stroke-width:.7;paint-order:stroke fill}
+
+/* Page view: the practised section stays at full strength; the rest of the page is dimmed. */
+#notation .context{opacity:calc(1 - var(--dim,.65))}
