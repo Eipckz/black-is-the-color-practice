@@ -57,3 +57,27 @@ test('triplets include rests and chords while genuine dotted notes remain dotted
   assert.equal(notes.filter(n=>n.startTriplet).length,1);assert.equal(notes[0].pitches.length,2);assert.equal(notes[1].rest.type,'rest');assert.equal(notes[2].endTriplet,true);
   assert.ok(notes.slice(3,6).every(n=>n.duration===3/32),'real dotted sixteenths retain their written duration');
 });
+
+// 840 divisions per quarter express fifths, sixths, sevenths and thirds exactly.
+const at840=bar=>parseMusicXML(`<score-partwise><part id="p"><measure number="1"><attributes><divisions>840</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>${bar}</measure></part></score-partwise>`,'Tuplets',DOMParser);
+const notes840=(steps,d)=>steps.split('').map(s=>note(s,d)).join('');
+const rest=d=>`<note><rest/><duration>${d}</duration></note>`;
+test('quintuplets and septuplets engrave as sixteenths with their tuplet numbers',()=>{
+  for(const [count,d,m] of [[5,168,4],[7,120,4]]){
+    const score=at840(notes840('CDEFGAB'.slice(0,count),d)+rest(2520)),abc=importedExcerpt(score,'right',1,1),list=notationNotes(abc);
+    assert.ok(abc.includes('('+count+':'+m+':'+count));assert.doesNotMatch(abc,/\/5|\/7/);
+    assert.ok(list.slice(0,count).every(n=>n.duration===1/16));assert.equal(list[0].startTriplet,count);assert.equal(list[count-1].endTriplet,true);
+    assert.ok(list[0].startBeam&&list[count-1].endBeam);
+    const cues=makeCues(eventsFor(score,'right',1,1),'right',1,4);assert.equal(new Set(cues.map(c=>c.selector)).size,cues.length);
+  }
+});
+test('unequal triplets: quarter plus eighth, and a rest before a note',()=>{
+  for(const bar of [note('C',560,{type:'quarter'})+note('D',280),rest(280)+note('D',560,{type:'quarter'})]){
+    const abc=importedExcerpt(at840(bar+rest(2520)),'right',1,1),list=notationNotes(abc);
+    assert.match(abc,/\(3:2:2/);assert.deepEqual([...list.slice(0,2)].map(n=>n.duration).sort(),[1/8,1/4]);assert.equal(list[0].startTriplet,3);
+  }
+});
+test('sextuplet sixteenths engrave as two sixteenth-note triplets',()=>{
+  const list=notationNotes(importedExcerpt(at840(notes840('CDEFGA',140)+rest(2520)),'right',1,1));
+  assert.equal(list.filter(n=>n.startTriplet===3).length,2);assert.ok(list.slice(0,6).every(n=>n.duration===1/16));
+});

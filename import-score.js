@@ -79,14 +79,24 @@ export function segmentNotes(notes,measures,length){
 const fraction=value=>{let denominator=1;while(denominator<100000&&Math.abs(value*denominator-Math.round(value*denominator))>1e-5)denominator++;return `${Math.round(value*denominator)}/${denominator}`;};
 const keyNames=['Cb','Gb','Db','Ab','Eb','Bb','F','C','G','D','A','E','B','F#','C#'];
 const keyAlter=(step,fifths)=>((fifths>0?'FCGDAEB':'BEADGCF').slice(0,Math.abs(fifths)).includes(step)?Math.sign(fifths):0);
-// Playback durations alone do not tell abcjs to engrave a tuplet. Recognize
-// complete equal-note triplets, including in scores saved before this fix.
-function tripletLength(events,index){
-  const group=events.slice(index,index+3);if(group.length!==3)return null;
-  const written=events[index].duration*3/2;
-  const length=[1/16,1/8,1/4,1/2,1,2,4,8,16].find(n=>Math.abs(n-written)<1e-6);
-  if(!length||!group.every((e,i)=>Math.abs(e.duration-length*2/3)<1e-6&&(!i||Math.abs(e.beat-group[i-1].beat-group[i-1].duration)<1e-6)))return null;
-  return length;
+const powers=[1/16,1/8,1/4,1/2,1,2,4,8,16];
+const plain=d=>powers.some(p=>[1,1.5,1.75].some(dot=>Math.abs(d-p*dot)<1e-5));
+// Playback durations alone do not tell abcjs to engrave a tuplet. A duration that no plain or dotted
+// note can write starts a tuplet: find the shortest contiguous group whose written values fill n units
+// of one standard note value, e.g. (3:2:3 eighths, (3:2:2 quarter + eighth, (5:4:5 sixteenths.
+// Rounded timings in scores saved before this fix are accepted within the tolerance.
+function tupletAt(events,index,compound){
+  const first=events[index];if(!first||plain(first.duration))return null;
+  for(const n of compound?[3,2,4,5,6,7]:[3,5,6,7]){
+    const m=compound&&(n===2||n===4)?3:2**Math.floor(Math.log2(n)),factor=n/m;let written=0;
+    for(let j=index;j<events.length;j++){
+      const e=events[j];if(j>index&&Math.abs(e.beat-events[j-1].beat-events[j-1].duration)>1e-6)break;
+      if(!plain(e.duration*factor))break;written+=e.duration*factor;
+      if(j>index&&powers.some(p=>Math.abs(written/n-p)<1e-5))return {n,m,count:j-index+1,factor};
+      if(written>n*4)break;
+    }
+  }
+  return null;
 }
 export function importedExcerpt(score,hand,start,end,large=false,layout={}){
   const ids=hand==='both'?['right','left']:[hand],[beats,beatType]=score.meter.split('/').map(Number),group=beatType===8&&beats%3===0?1.5:1;
@@ -99,14 +109,14 @@ export function importedExcerpt(score,hand,start,end,large=false,layout={}){
       const fifths=score.measureKeys?.[m-1]??0,accidentals=new Map();
       if(m>start&&fifths!==(score.measureKeys?.[m-2]??0))abc+='[K:'+keyNames[fifths+7]+'] ';
       const inBar=events.filter(e=>Math.floor((e.beat+1e-6)/score.beatsPerMeasure)+1===m),barStart=(m-1)*score.beatsPerMeasure;
-      let tripletRemaining=0,writtenLength=null;
+      let tupletRemaining=0,factor=1;
       for(let i=0;i<inBar.length;i++){
         const e=inBar[i];
-        if(!tripletRemaining){writtenLength=tripletLength(inBar,i);if(writtenLength){abc+='(3:2:3';tripletRemaining=3;}}
-        const duration=writtenLength??e.duration;
+        if(!tupletRemaining){const t=tupletAt(inBar,i,group===1.5);factor=t?.factor??1;if(t){abc+='('+t.n+':'+t.m+':'+t.count;tupletRemaining=t.count;}}
+        const duration=e.duration*factor;
         // A space breaks the beam: beam contiguous notes shorter than a quarter within one beat group.
-        const n=inBar[i+1],beamed=!tripletRemaining&&n&&e.notes.length&&n.notes.length&&duration<1&&(tripletLength(inBar,i+1)??n.duration)<1&&Math.abs(n.beat-e.beat-e.duration)<1e-6&&Math.floor((e.beat-barStart+1e-6)/group)===Math.floor((n.beat-barStart+1e-6)/group);
-        const separator=tripletRemaining&&--tripletRemaining||beamed?'':' ';
+        const n=inBar[i+1],beamed=!tupletRemaining&&n&&e.notes.length&&n.notes.length&&duration<1&&n.duration*(tupletAt(inBar,i+1,group===1.5)?.factor??1)<1&&Math.abs(n.beat-e.beat-e.duration)<1e-6&&Math.floor((e.beat-barStart+1e-6)/group)===Math.floor((n.beat-barStart+1e-6)/group);
+        const separator=tupletRemaining&&--tupletRemaining||beamed?'':' ';
         if(!e.notes.length){abc+='z'+fraction(duration)+separator;continue;}
         const tokens=e.notes.map((n,i)=>{const p=e.spellings[i];let pitch=p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave));const previous=accidentals.get(pitch)??keyAlter(p.step,fifths);const accidental=p.alter===previous?'':p.alter>0?'^'.repeat(p.alter):p.alter<0?'_'.repeat(-p.alter):'=';accidentals.set(pitch,p.alter);return accidental+pitch+(e.tieStarts.includes(n)?'-':'');});
         const fingering=e.fingers.filter(f=>/^[1-5]$/.test(f)).map(f=>'!'+f+'!').join('');

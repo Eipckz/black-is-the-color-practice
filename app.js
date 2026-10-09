@@ -5,7 +5,7 @@ import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern} from './practice.js?v=11';
 import {renderWindow,contextMeasures,lineBars} from './view.js?v=1';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=17';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=18';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore} from './library.js?v=11';
 let score=builtinScore, activeId=BUILTIN, library=[], beatsPerMeasure=4, pulse=1, pulsesPerMeasure=4;
 import {noteName,eventsFor,detectPitch,acceptPitch,validateProgress} from './engine.js?v=5';
