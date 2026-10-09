@@ -1,7 +1,7 @@
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {
   const sections = [];
-  for (let start = 1; start <= measures; start += size) {const end=Math.min(start+size-1,measures);sections.push({name:start===end?`Measure ${start}`:`Measures ${start} to ${end}`,start,end,goal:'Read the notes and rests, then practise slowly with a steady pulse.',hint:'Prepare the first notes in each hand. Choose a comfortable fingering and keep it consistent.'});}
+  for (let start = 1; start <= measures; start += size) {const end=Math.min(start+size-1,measures);sections.push({name:start===end?`Measure ${start}`:`Measures ${start} to ${end}`,start,end,goal:'Read the notes and rests, then practice slowly with a steady pulse.',hint:'Prepare the first notes in each hand. Choose a comfortable fingering and keep it consistent.'});}
   const count = sections.length;
   for (let i=1;i<count;i++) sections.push({name:'Join sections '+i+' and '+(i+1),start:sections[i-1].end,end:sections[i].end,goal:'Keep the pulse through the change between sections.',hint:'Prepare the next hand position before the bar line.'});
   sections.push({name:'Full performance',start:1,end:measures,goal:'Play the whole piece through. Keep going after a small slip, then revisit it.',hint:'Choose a reliable tempo and prepare both hands before the count-in.'});
@@ -57,7 +57,7 @@ export function chooseLesson(state, sections, measures){
   const hands=state.phase==='learn'?['left','right']:['both'];
   const count=state.phase==='polish'?sections.length-1:Math.ceil(measures/(state.sectionSize||2));
   let candidates=Array.from({length:count},(_,section)=>hands.map(hand=>({section,hand}))).flat();
-  // Return to a passage after practising a different one, including in separate-hands mode.
+  // Return to a passage after practicing a different one, including in separate-hands mode.
   const otherSections=candidates.filter(c=>c.section!==state.section);
   const other=otherSections.length?otherSections:candidates.filter(c=>c.hand!==state.hand);
   if(other.length)candidates=other;

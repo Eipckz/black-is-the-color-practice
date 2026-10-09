@@ -1,4 +1,4 @@
-// Which measures the score shows around the practised section, and which of them are dimmed context.
+// Which measures the score shows around the practiced section, and which of them are dimmed context.
 export function renderWindow(measures,section,{scoreView='page',pageMeasures=8}={}){
  if(scoreView==='section')return {start:section.start,end:section.end};
  if(scoreView==='piece')return {start:1,end:measures};

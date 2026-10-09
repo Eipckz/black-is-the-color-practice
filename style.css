@@ -30,7 +30,7 @@ header{max-width:none;padding:10px 20px;align-items:center;min-height:58px}.head
 #notation .abcjs-notehead.altered-pitch{fill:#7736ad;stroke:none}
 #notation .is-current .abcjs-notehead.altered-pitch{fill:#7736ad;stroke:#7736ad;stroke-width:.7;paint-order:stroke fill}
 
-/* Page view: the practised section stays at full strength; the rest of the page is dimmed. */
+/* Page view: the practiced section stays at full strength; the rest of the page is dimmed. */
 #notation .context{opacity:calc(1 - var(--dim,.65))}
 #notation .is-next:not(.is-current){outline:2px dashed #637d9d;outline-offset:4px;border-radius:3px}
 .tempo-mark{display:flex;align-items:center;gap:10px;margin:0;font-size:12px;color:var(--muted)}
