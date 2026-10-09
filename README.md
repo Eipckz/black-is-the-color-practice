@@ -97,6 +97,8 @@ Automated checks cover score parity, final attack, ties, seeking held notes, mut
 
 Sound & practice settings includes current notes/rests, whole-measure highlighting, or no highlighting. Current left-hand notes are green and right-hand notes are orange. Held notes remain highlighted while the other hand changes. The Now / Next guide includes pitches, rests, and fingerings.
 
+Outline upcoming notes (off by default) adds a dashed outline to the next entry. In both-hands practice the on-screen keyboard lights each key in its own hand's colour. The marked tempo of the score appears under the controls; Set to marked tempo applies it, while new pieces still start at 50 BPM for learning.
+
 Auto-scroll follows the active system during playback and count-in practice; it follows the score's clock, not microphone performance. Toggle it independently of highlighting. Tap a written note or rest to seek, or use Previous notes / Next notes to study each entry while paused. These controls preserve the chosen section and tempo. Settings are saved on this device.
 
 ## Casio USB MIDI

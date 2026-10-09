@@ -20,7 +20,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   if(doc.querySelector('repeat, ending')||Array.from(doc.querySelectorAll('sound')).some(n=>['dacapo','dalsegno','tocoda','fine'].some(a=>n.hasAttribute(a))))fail('Expand repeats and jumps in your notation app before importing, so each practice measure has one playback position.');
   const measures=children(selected,'measure');
   if(!measures.length||measures.length>500)fail('Import between 1 and 500 measures at a time.');
-  let divisions=1,meter=null,beats=4,beatType=4,key=0,tempo=80;
+  let divisions=1,meter=null,beats=4,beatType=4,key=0,tempo=null;
   const measureKeys=[];
   const raw={right:[],left:[]},clefs={right:'treble',left:'bass'};
   const warnings=new Set(['Playback uses a steady tempo. Follow expressive dynamics, pedal, ornaments, and tempo changes yourself.']);
@@ -35,7 +35,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
     }
     measureKeys.push(key);
     const length=beats*4/beatType,base=index*length;let cursor=0,previous=null,reached=0;
-    const sound=measure.querySelector('sound[tempo]');if(index===0&&sound)tempo=Number(sound.getAttribute('tempo'))||80;
+    const sound=measure.querySelector('sound[tempo]');if(index===0&&sound)tempo=Number(sound.getAttribute('tempo'))||null;
     for(const element of measure.children){
       if(['backup','forward'].includes(element.localName)){cursor+=(element.localName==='backup'?-1:1)*number(element,'duration',0)/divisions;if(cursor<-.00001)fail('Invalid backward position in MusicXML.');reached=Math.max(reached,cursor);continue;}
       if(element.localName!=='note')continue;

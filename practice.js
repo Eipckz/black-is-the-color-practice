@@ -10,7 +10,7 @@ export function makeSections(measures) {
 }
 export function freshState(saved={}, sections, measures) {
   const phase=phases.includes(saved.phase)?saved.phase:'learn';
-  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',previewNext:true,scoreView:'page',pageMeasures:8,barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,records:{},...saved,phase};
+  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',outlineNext:false,scoreView:'page',pageMeasures:8,barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,records:{},...saved,phase};
   state.stages={};
   for(const p of phases) {
     const old=saved.stages?.[p]||{};
@@ -33,6 +33,8 @@ export function freshState(saved={}, sections, measures) {
   if(![4,8,12,16].includes(state.pageMeasures))state.pageMeasures=8;
   if(!['auto',1,2,4].includes(state.barsPerLine))state.barsPerLine='auto';
   state.contextDim=Number.isFinite(state.contextDim)?Math.max(0,Math.min(90,Math.round(state.contextDim))):65;
+  delete state.previewNext;state.outlineNext=state.outlineNext===true;
+  for(const key of ['showCueGuide','autoFollow'])state[key]=state[key]!==false;
   Object.assign(state,state.stages[phase]);
   return state;
 }
