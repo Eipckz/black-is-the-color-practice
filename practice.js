@@ -13,7 +13,7 @@ export const recordKey=(state,section,hand)=>(state.sectionSize&&state.sectionSi
 export const recordKeyPattern=/^(?:[14]\/)?\d+:(left|right|both)$/;
 export function freshState(saved={}, sections, measures) {
   const phase=phases.includes(saved.phase)?saved.phase:'learn';
-  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,metronomeSub:'beat',scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',outlineNext:false,scoreView:'page',pageMeasures:8,barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,sectionSize:2,learnOrder:'left',interleave:'jump',tempoStep:5,autoSlow:true,records:{},...saved,phase};
+  const state={tempo:50,volume:75,leftVolume:70,rightVolume:80,countBars:1,metronomeSub:'beat',scoreSize:'standard',customStart:1,customEnd:Math.min(2,measures),highlightMode:'notes',outlineNext:false,scoreView:'piece',pageMeasures:8,followSection:true,scoreHeight:'auto',barsPerLine:'auto',contextDim:65,showCueGuide:true,autoFollow:true,sectionSize:2,learnOrder:'left',interleave:'jump',tempoStep:5,autoSlow:true,records:{},...saved,phase};
   if(![1,2,4].includes(state.sectionSize))state.sectionSize=2;
   if(!['left','right','alternate'].includes(state.learnOrder))state.learnOrder='left';
   state.stages={};
@@ -36,12 +36,14 @@ export function freshState(saved={}, sections, measures) {
   for(const key of ['volume','leftVolume','rightVolume'])state[key]=Number.isFinite(state[key])?Math.max(0,Math.min(100,state[key])):75;
   if(![0,1,2].includes(state.countBars))state.countBars=1;
   if(!['beat','eighth'].includes(state.metronomeSub))state.metronomeSub='beat';
-  if(!['section','page','piece'].includes(state.scoreView))state.scoreView='page';
+  if(state.scoreView==='page')state.scoreView='around';
+  if(!['piece','around','section'].includes(state.scoreView))state.scoreView='piece';
+  if(!['auto','fit','half','tall'].includes(state.scoreHeight))state.scoreHeight='auto';
   if(![4,8,12,16].includes(state.pageMeasures))state.pageMeasures=8;
   if(!['auto',1,2,4].includes(state.barsPerLine))state.barsPerLine='auto';
   state.contextDim=Number.isFinite(state.contextDim)?Math.max(0,Math.min(90,Math.round(state.contextDim))):65;
   delete state.previewNext;state.outlineNext=state.outlineNext===true;
-  for(const key of ['showCueGuide','autoFollow','autoSlow'])state[key]=state[key]!==false;
+  for(const key of ['showCueGuide','autoFollow','autoSlow','followSection'])state[key]=state[key]!==false;
   if(!['jump','near','order'].includes(state.interleave))state.interleave='jump';
   if(![2,5,10].includes(state.tempoStep))state.tempoStep=5;
   const notes=state.notes&&typeof state.notes==='object'&&!Array.isArray(state.notes)?state.notes:{};

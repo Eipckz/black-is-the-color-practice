@@ -84,3 +84,8 @@ body,.card{background:#fff!important;border:0!important;box-shadow:none!importan
 .mic-option{display:block;font-size:13px;margin:10px 0}
 .mic-option select{margin-top:6px}
 .midi-heard small{font-size:11px;color:var(--muted)}
+/* A limited score height scrolls inside the score area, keeping transport and ratings on screen. */
+[data-score-height=half] #scoreWrap{max-height:clamp(200px,100dvh - 520px,50dvh);overflow:auto;overscroll-behavior:contain}
+[data-score-height=tall] #scoreWrap{max-height:75dvh;overflow:auto;overscroll-behavior:contain}
+#scoreWrap{scroll-padding-top:24px}
+html{scroll-padding-top:120px}
