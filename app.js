@@ -1,15 +1,15 @@
 import {timingState,recordTimedRound,estimatePractice,timeText,dailyState,addPractice,mergeDaily,addHistory,historyByDay,historyCSV,updateAccuracy} from './estimate.js?v=11';
 import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWindow} from './midi.js?v=8';
-import {makeCues,cueState,stepBeat,alteredNoteHeads,spelledNotes,noteLabel} from './follower.js?v=14';
+import {makeCues,cueState,stepBeat,alteredNoteHeads,spelledNotes,noteLabel} from './follower.js?v=15';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=5';
 import {score as builtinScore} from './score-data.js';
-import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern,nextLoopPoints,loopRange} from './practice.js?v=19';
+import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern,nextLoopPoints,loopRange} from './practice.js?v=20';
 import {renderWindow,contextMeasures,lineBars,firstSectionNode} from './view.js?v=3';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=22';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=23';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore,listRecordings,storeRecording,deleteRecording,deleteRecordings} from './library.js?v=12';
-import {settings,settingByKey,groups,validate,actions,validKeys,presets,matchingPreset} from './settings.js?v=6';
+import {settings,settingByKey,groups,validate,actions,validKeys,presets,matchingPreset} from './settings.js?v=7';
 let score=builtinScore, activeId=BUILTIN, library=[], starts=measureStarts(builtinScore);
-import {noteName,frequency,eventsFor,detectPitch,acceptPitch,validateProgress,measureStarts,measureAt} from './engine.js?v=8';
+import {noteName,frequency,eventsFor,voiceEventsFor,detectPitch,acceptPitch,validateProgress,measureStarts,measureAt} from './engine.js?v=9';
 const $=id=>document.getElementById(id);
 const builtinSections=[
  {name:'Opening pattern',start:1,end:2,goal:'Give the left-hand bass its full length. The right hand begins on the “and” of beat 1.',hint:'LH: E2 (2), then E2 (2) → B1 (5). RH: E3 with thumb; G3 + B3 with 3 + 5. For B minor: B2, then D3 + F♯3.'},
@@ -47,6 +47,7 @@ function handLabel(){return state.hand==='left'?'Left hand':state.hand==='right'
 function rawMeasures(id){return score.abc.split('\n').filter(l=>l.startsWith('[V:'+id+']')).flatMap(l=>l.replace(/^\[V:[^\]]+\]\s*/,'').replace(/\|\]/g,'|').split('|').filter(x=>x.trim()));}
 function largeScore(){return state.scoreSize==='large'||window.matchMedia('(max-width:600px)').matches;}
 const scoreWindow=()=>renderWindow(score.measures,section(),state);
+const separatedVoices=()=>!!(state.separateVoices&&score.voiceParts);
 // Printed bar number: imports with written-out repeats show which time through.
 const measureLabel=m=>score.printedMeasures?.[m-1]??String(m);
 // Wider staves only when more than two measures share a line; abcjs scales the SVG to the container.
@@ -64,7 +65,7 @@ function revealNodes(nodes,force=false){if(!nodes.length)return;const rects=node
 const sectionKey=()=>activeId+'|'+state.phase+'|'+section().start+'-'+section().end;
 function scrollToSection(w){const key=sectionKey();if(key===scrolledSection)return;scrolledSection=key;if(!state.followSection||state.scoreView==='section')return;const first=firstSectionNode($('notation'),w,section());if(!first)return;const line=first.getAttribute('class').match(/abcjs-l\d+/)?.[0];revealNodes(line?[...$('notation').querySelectorAll('.'+line)]:[first],true);followLine=line;}
 function layout(w){renderedLineBars=largeScore()?1:lineBars(state.barsPerLine,innerWidth);const bars=Math.min(renderedLineBars,w.end-w.start+1);return {bars,width:largeScore()?300:bars>2?Math.max(540,$('notation').clientWidth-20):540};}
-function excerpt(w,{bars,width}){if(score.imported)return importedExcerpt(score,state.hand,w.start,w.end,largeScore(),{bars,width,expression:state.showExpression});const ids=state.hand==='left'?['LH']:state.hand==='right'?['RH']:['RH','LH'];let h='X:1\nT:Measures '+w.start+'–'+w.end+' · '+handLabel()+'\nM:4/4\nL:1/8\n%%score '+(ids.length===2?'{ RH LH }':ids[0])+'\n%%barsperstaff '+bars+'\n%%staffwidth '+width+'\n%%titlefont Georgia 16\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n';for(const id of ids)h+='V:'+id+' clef=bass name="'+id+'"\n';h+='K:Em\n';for(const id of ids){let bars=rawMeasures(id).slice(w.start-1,w.end).map(x=>x.replace(/!>[()]!/g,'').replace(/[()]/g,''));h+='[V:'+id+'] '+bars.join(' | ')+' |]\n';}return h;}
+function excerpt(w,{bars,width}){if(score.imported)return importedExcerpt(score,state.hand,w.start,w.end,largeScore(),{bars,width,expression:state.showExpression,separate:separatedVoices()});const ids=state.hand==='left'?['LH']:state.hand==='right'?['RH']:['RH','LH'];let h='X:1\nT:Measures '+w.start+'–'+w.end+' · '+handLabel()+'\nM:4/4\nL:1/8\n%%score '+(ids.length===2?'{ RH LH }':ids[0])+'\n%%barsperstaff '+bars+'\n%%staffwidth '+width+'\n%%titlefont Georgia 16\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n';for(const id of ids)h+='V:'+id+' clef=bass name="'+id+'"\n';h+='K:Em\n';for(const id of ids){let bars=rawMeasures(id).slice(w.start-1,w.end).map(x=>x.replace(/!>[()]!/g,'').replace(/[()]/g,''));h+='[V:'+id+'] '+bars.join(' | ')+' |]\n';}return h;}
 // abcjs 6.6.4 numbers systems only when %%setbarnb is not 1 and miscounts later systems,
 // so excerpts always set 2 and each system is labelled here from its measure class.
 function decorateScore(w){const n=$('notation');n.style.setProperty('--dim',state.contextDim/100);n.querySelectorAll('.context').forEach(e=>e.classList.remove('context'));drawFlags(w);drawHeat(w);for(const t of n.querySelectorAll('.abcjs-bar-number'))t.textContent=measureLabel(w.start+Number(t.getAttribute('class').match(/abcjs-mm(\d+)/)[1]));for(const m of contextMeasures(w,section()))n.querySelectorAll('.abcjs-mm'+(m-w.start)).forEach(e=>e.classList.add('context'));applyMemorize(w);}
@@ -100,7 +101,7 @@ function highlight(events=[]){const lit=new Set(events.flatMap(e=>e.notes)),left
 // Every rendered note is a cue; only those inside the section drive highlighting and stepping.
 // Tapping a dimmed context note turns its measure into a one-bar practice range.
 function bindCues(w){
- const first=sectionStart(),last=starts[section().end],all=makeCues(eventsFor(score,state.hand,w.start,w.end),state.hand,w.start,starts);cueNodes=new Map();
+ const first=sectionStart(),last=starts[section().end],all=makeCues(separatedVoices()?voiceEventsFor(score,state.hand,w.start,w.end):eventsFor(score,state.hand,w.start,w.end),state.hand,w.start,starts).filter(c=>!c.hidden);cueNodes=new Map();
  cues=all.filter(c=>c.beat>=first-1e-6&&c.beat<last-1e-6);
  const inside=new Set(cues);
  for(const cue of all){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';let pressTimer=0,longPress=false;node.onpointerdown=()=>{longPress=false;if(!inside.has(cue))return;clearTimeout(pressTimer);pressTimer=setTimeout(()=>{longPress=true;setLoopPoint(cue);},550);};node.onpointerup=node.onpointerleave=()=>clearTimeout(pressTimer);node.onclick=event=>{if(longPress){longPress=false;return;}if(!inside.has(cue))return practiceMeasure(barAt(cue.beat));if(event.shiftKey)setLoopPoint(cue);else seekTo(cue.beat-first);};

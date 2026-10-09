@@ -1,5 +1,5 @@
 // Local MusicXML reading. No uploads or external conversion service.
-import {measureStarts,keyAlter} from './engine.js?v=8';
+import {measureStarts,keyAlter} from './engine.js?v=9';
 const text=(node,selector,fallback='')=>node.querySelector(selector)?.textContent.trim()??fallback;
 const number=(node,selector,fallback)=>Number(text(node,selector,String(fallback)));
 const children=(node,name)=>Array.from(node.children).filter(n=>n.localName===name);
@@ -58,7 +58,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
         if(!Number.isInteger(midi)||midi<21||midi>108||!Number.isInteger(alter)||Math.abs(alter)>2)fail('Only standard piano pitches A0 to C8 are supported.');
         const ties=Array.from(element.querySelectorAll('tie')).map(t=>t.getAttribute('type')),slurs=Array.from(element.querySelectorAll('notations slur')).map(s=>s.getAttribute('type'));
         const arts=['staccato','staccatissimo','accent','strong-accent','tenuto'].filter(a=>element.querySelector('articulations '+a)).concat(element.querySelector('notations fermata')?['fermata']:[]);
-        raw[staff===2?'left':'right'].push({beat:base+start,duration,midi,step,octave,alter,finger:text(element,'notations technical fingering'),tieStart:ties.includes('start'),tieEnd:ties.includes('stop'),arts,slurStart:slurs.includes('start'),slurStop:slurs.includes('stop')});
+        raw[staff===2?'left':'right'].push({beat:base+start,duration,midi,step,octave,alter,voice:text(element,'voice','1')||'1',finger:text(element,'notations technical fingering'),tieStart:ties.includes('start'),tieEnd:ties.includes('stop'),arts,slurStart:slurs.includes('start'),slurStop:slurs.includes('stop')});
       }
       if(!chord){previous=cursor;cursor+=duration;}
       reached=Math.max(reached,start+duration);
@@ -72,7 +72,9 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   if(measures.length>written.length)warnings.add('Repeats and endings are written out in playing order; bar numbers show which time through.');
   const seen=new Map(),printedMeasures=order.map(i=>{const count=(seen.get(i)||0)+1;seen.set(i,count);return (written[i].getAttribute('number')||String(i+1))+(count>1?' ('+count+(count===2?'nd':count===3?'rd':'th')+' time)':'');});
   const voices=Object.entries(raw).map(([id,notes])=>({id,events:segmentNotes(notes,starts)}));
-  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',meters,measureStarts:starts,beatsPerMeasure:starts[1],...(measures.length>written.length?{printedMeasures}:{}),...(marks.right.length||marks.left.length?{expressions:marks}:{}),clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
+  // Separate MusicXML voices per staff, for voice-aware engraving: one abcjs voice each, stems up then down.
+  const voiceParts=Object.fromEntries(Object.entries(raw).map(([id,notes])=>[id,[...new Set(notes.map(n=>n.voice))].sort((a,b)=>Number(a)-Number(b)||a.localeCompare(b)).map(voice=>({voice,events:segmentNotes(notes.filter(n=>n.voice===voice),starts)}))]).filter(([,parts])=>parts.length>1));
+  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',meters,measureStarts:starts,beatsPerMeasure:starts[1],...(measures.length>written.length?{printedMeasures}:{}),...(marks.right.length||marks.left.length?{expressions:marks}:{}),...(Object.keys(voiceParts).length?{voiceParts}:{}),clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
 }
 // Repeats and endings written out in playing order, as indexes into the written measures. A backward
 // repeat returns to the last forward repeat (or the start, or just after the previous repeat); an
@@ -133,13 +135,17 @@ function tupletAt(events,index,compound){
   }
   return null;
 }
+// The abcjs voices for a hand, in staff order: one per staff, or one per MusicXML voice when layout.separate.
+export function excerptVoices(score,hand,separate=false){
+  return (hand==='both'?['right','left']:[hand]).flatMap(staff=>{const parts=separate?score.voiceParts?.[staff]:null;return parts?parts.map((p,i)=>({key:staff+(i+1),staff,events:p.events,secondary:i>0,stem:i?'down':'up',first:!i})):[{key:staff,staff,events:score.voices.find(v=>v.id===staff).events,secondary:false,first:true}];});
+}
 export function importedExcerpt(score,hand,start,end,large=false,layout={}){
-  const ids=hand==='both'?['right','left']:[hand],starts=measureStarts(score),meterAt=m=>score.meters?.[m-1]??score.meter;
-  let abc=`X:1\nT:Measures ${start}-${end}\nM:${meterAt(start)}\nL:1/4\n%%score ${ids.length===2?'{ right left }':ids[0]}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
-  for(const id of ids)abc+=`V:${id} clef=${score.clefs[id]} name="${id==='right'?'RH':'LH'}"\n`;
+  const ids=hand==='both'?['right','left']:[hand],starts=measureStarts(score),meterAt=m=>score.meters?.[m-1]??score.meter,lines=excerptVoices(score,hand,layout.separate),group=staff=>{const keys=lines.filter(l=>l.staff===staff).map(l=>l.key);return keys.length>1?'('+keys.join(' ')+')':keys[0];};
+  let abc=`X:1\nT:Measures ${start}-${end}\nM:${meterAt(start)}\nL:1/4\n%%score ${ids.length===2?'{ '+group('right')+' '+group('left')+' }':group(ids[0])}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
+  for(const l of lines)abc+=`V:${l.key} clef=${score.clefs[l.staff]}`+(l.first?` name="${l.staff==='right'?'RH':'LH'}"`:'')+(l.stem?' stem='+l.stem:'')+'\n';
   const openingKey=score.measureKeys?.[start-1]??0;
   abc+='K:'+keyNames[openingKey+7]+'\n';
-  for(const id of ids){abc+=`[V:${id}] `;const events=score.voices.find(v=>v.id===id).events,marks=layout.expression?score.expressions?.[id]||[]:[];
+  for(const {key,staff:id,events,secondary,first:primary} of lines){abc+=`[V:${key}] `;const marks=layout.expression&&primary?score.expressions?.[id]||[]:[];
     for(let m=start;m<=end;m++){
       const fifths=score.measureKeys?.[m-1]??0,accidentals=new Map();
       if(m>start&&meterAt(m)!==meterAt(m-1))abc+='[M:'+meterAt(m)+'] ';
@@ -155,7 +161,7 @@ export function importedExcerpt(score,hand,start,end,large=false,layout={}){
         const n=inBar[i+1],beamed=!tupletRemaining&&n&&e.notes.length&&n.notes.length&&duration<1&&n.duration*(tupletAt(inBar,i+1,group===1.5)?.factor??1)<1&&Math.abs(n.beat-e.beat-e.duration)<1e-6&&Math.floor((e.beat-barStart+1e-6)/group)===Math.floor((n.beat-barStart+1e-6)/group);
         const separator=tupletRemaining&&--tupletRemaining||beamed?'':' ';
         const here=marks.filter(k=>k.beat>=e.beat-1e-6&&k.beat<e.beat+e.duration-1e-6),expression=here.map(k=>k.pedal?pedalMark[k.pedal]:'').join('')+here.map(k=>k.dynamic?'!'+k.dynamic+'!':k.wedge?wedgeMark[k.wedge]:'').join('');
-        if(!e.notes.length){abc+=expression+'z'+fraction(duration)+separator;continue;}
+        if(!e.notes.length){abc+=expression+(secondary?'x':'z')+fraction(duration)+separator;continue;}
         const tokens=e.notes.map((n,i)=>{const p=e.spellings[i];let pitch=p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave));const previous=accidentals.get(pitch)??keyAlter(p.step,fifths);const accidental=p.alter===previous?'':p.alter>0?'^'.repeat(p.alter):p.alter<0?'_'.repeat(-p.alter):'=';accidentals.set(pitch,p.alter);return accidental+pitch+(e.tieStarts.includes(n)?'-':'');});
         const fingering=e.fingers.filter(f=>/^[1-5]$/.test(f)).map(f=>'!'+f+'!').join('');
         const slurOpen=layout.expression&&e.slurStart?'(':'',slurClose=layout.expression&&e.slurStop?')':'',arts=layout.expression?(e.arts||[]).map(a=>articulation[a]).join(''):'';

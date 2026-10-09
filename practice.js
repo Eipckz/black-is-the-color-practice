@@ -1,4 +1,4 @@
-import {defaults,validate} from './settings.js?v=6';
+import {defaults,validate} from './settings.js?v=7';
 import {validHistory} from './estimate.js?v=11';
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {

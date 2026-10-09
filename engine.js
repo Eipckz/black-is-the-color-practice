@@ -5,6 +5,10 @@ export const frequency = n => 440*Math.pow(2,(n-69)/12);
 // Absolute start of every measure in quarter-note beats, followed by the end of the piece. Meters may change.
 export const measureStarts=score=>score.measureStarts?.length===score.measures+1?score.measureStarts:Array.from({length:score.measures+1},(_,i)=>i*(score.beatsPerMeasure||4));
 export function measureAt(starts,beat){let m=1;while(m<starts.length-1&&starts[m]<=beat+1e-6)m++;return m;}
+// Events per abcjs voice for the follower when imported voices are engraved separately. voiceIndex is the
+// abcjs voice; rests in secondary voices are invisible (hidden: no element, but they keep their index).
+export function voiceEventsFor(score,hand,start,end){const starts=measureStarts(score),lo=starts[start-1],hi=starts[end];let index=0;
+ return (hand==='both'?['right','left']:[hand]).flatMap(staff=>{const parts=score.voiceParts?.[staff]||[{events:score.voices.find(v=>v.id===staff).events}];return parts.map((p,i)=>{const voiceIndex=index++;return p.events.filter(e=>e.beat>=lo-1e-6&&e.beat<hi-1e-6).map(e=>({...e,voice:staff,voiceIndex,...(i&&!e.notes.length?{hidden:true}:{})}));}).flat();}).sort((a,b)=>a.beat-b.beat||a.voiceIndex-b.voiceIndex);}
 export function eventsFor(score,hand,start,end){const starts=measureStarts(score),lo=starts[start-1],hi=starts[end];return score.voices.filter(v=>hand==='both'?['left','right'].includes(v.id):v.id===hand).flatMap(v=>v.events.filter(e=>e.beat>=lo-1e-6&&e.beat<hi-1e-6).map(e=>({...e,voice:v.id,...(Math.abs(e.beat-lo)<1e-6?{tieEnd:false,...(e.tieEnds?{tieEnds:[]}: {})}: {})}))).sort((a,b)=>a.beat-b.beat);}
 export function nextLesson(records,phase,previous,round){
  const hands=phase==='learn'?['left','right']:phase==='mix'?['both','left','right']:['both'];

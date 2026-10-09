@@ -24,6 +24,7 @@ export const settings=[
  check('showCueGuide','piece','score','Show the notes and fingerings guide',true,'marks'),
  check('autoFollow','piece','score','Follow the playing position during playback',true),
  check('heatmap','piece','score','Colour measures by accuracy in timed checks',false,'render',{help:'Green to red, from your recent MIDI timed checks and rhythm taps.'}),
+ check('separateVoices','piece','score','Engrave each voice separately',false,'render',{help:'Imported polyphony: stems up for the upper voice, down for the lower, instead of merged chords.'}),
  check('showExpression','piece','score','Dynamics, articulation, slurs and pedal marks',false,'render',{help:'Imported scores. Engraving only: playback stays even.'}),
  select('noteNames','piece','score','Note names on noteheads','off',[['off','Off'],['letters','Letters (C D E)'],['solfege','Fixed do (Do Re Mi)']],'render'),
  check('printNoteNames','piece','score','Print note names',false,'render'),
