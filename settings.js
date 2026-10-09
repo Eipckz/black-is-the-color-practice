@@ -23,6 +23,9 @@ export const settings=[
  check('outlineNext','piece','score','Outline upcoming notes',false,'marks'),
  check('showCueGuide','piece','score','Show the notes and fingerings guide',true,'marks'),
  check('autoFollow','piece','score','Follow the playing position during playback',true),
+ select('noteNames','piece','score','Note names on noteheads','off',[['off','Off'],['letters','Letters (C D E)'],['solfege','Fixed do (Do Re Mi)']],'render'),
+ check('printNoteNames','piece','score','Print note names',false,'render'),
+ check('showKeyboard','piece','score','Keyboard under the score',false,'render',{help:'Shows the keys to play now and outlines the next ones.'}),
  // Sound & playback
  select('countBars','piece','sound','Count-in',1,[[0,'None'],[1,'1 bar'],[2,'2 bars']]),
  select('metronomeSub','piece','sound','Metronome clicks','beat',[['beat','Each beat'],['eighth','Each eighth note']]),
@@ -33,6 +36,9 @@ export const settings=[
  select('interleave','piece','practice','Interleaving','jump',[['jump','Jump across the piece'],['near','Neighbouring passages'],['order','In order']]),
  select('tempoStep','piece','practice','Tempo step',5,[[2,'2 BPM'],[5,'5 BPM'],[10,'10 BPM']]),
  check('autoSlow','piece','practice','Slow down one tempo step after “Needs a slow retry”',true),
+ check('tempoRamp','piece','practice','Tempo ramp: raise a passage one step after two clean rounds',false,'render'),
+ range('rampTarget','piece','practice','Tempo ramp target',80,30,180,1,'render',{unit:' BPM',help:'Starts at the marked tempo when the score has one.'}),
+ check('autoHint','piece','practice','Show the starting hint for a passage’s first three rounds',false,'render'),
  {key:'dailyGoal',scope:'device',group:'practice',label:'Daily practice goal (minutes, 0 = off)',type:'number',default:0,min:0,max:600,step:5,refresh:'estimate'},
  // Display
  select('theme','device','display','Theme','auto',[['auto','Match this device'],['light','Light'],['dark','Dark']],'display'),
@@ -68,9 +74,9 @@ export function validKeys(value){
 }
 // Presets set only the keys they list and leave every other setting alone.
 export const presets={
- beginner:{label:'Beginner',values:{scoreView:'piece',contextDim:75,sectionSize:1,highlightMode:'notes',outlineNext:true,showCueGuide:true,countBars:2,metronomeSub:'eighth',tempoStep:2,autoSlow:true,learnOrder:'left',interleave:'near'}},
- intermediate:{label:'Intermediate',values:{scoreView:'piece',contextDim:65,sectionSize:2,highlightMode:'notes',outlineNext:false,showCueGuide:true,countBars:1,metronomeSub:'beat',tempoStep:5,autoSlow:true,learnOrder:'alternate',interleave:'jump'}},
- advanced:{label:'Advanced',values:{scoreView:'piece',contextDim:40,sectionSize:4,highlightMode:'measure',outlineNext:false,showCueGuide:false,countBars:1,metronomeSub:'beat',tempoStep:10,autoSlow:false,learnOrder:'alternate',interleave:'jump'}},
+ beginner:{label:'Beginner',values:{scoreView:'piece',contextDim:75,sectionSize:1,highlightMode:'notes',outlineNext:true,showCueGuide:true,countBars:2,metronomeSub:'eighth',tempoStep:2,autoSlow:true,learnOrder:'left',interleave:'near',noteNames:'letters',showKeyboard:true,tempoRamp:true,autoHint:true}},
+ intermediate:{label:'Intermediate',values:{scoreView:'piece',contextDim:65,sectionSize:2,highlightMode:'notes',outlineNext:false,showCueGuide:true,countBars:1,metronomeSub:'beat',tempoStep:5,autoSlow:true,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:true,autoHint:false}},
+ advanced:{label:'Advanced',values:{scoreView:'piece',contextDim:40,sectionSize:4,highlightMode:'measure',outlineNext:false,showCueGuide:false,countBars:1,metronomeSub:'beat',tempoStep:10,autoSlow:false,learnOrder:'alternate',interleave:'jump',noteNames:'off',showKeyboard:false,tempoRamp:false,autoHint:false}},
 };
 // The preset whose every value matches; sectionSize is ignored where sections are fixed.
 export function matchingPreset(get,fixedSections=false){

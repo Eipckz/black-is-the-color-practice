@@ -25,3 +25,9 @@ test('the virtual input is listed first, works without Web MIDI, and round-trips
  await c.connect(async()=>({inputs:new Map([['casio',input]])}));assert.deepEqual(ports.map(p=>p.id),['virtual','casio']);
  c.disconnect();assert.equal(lost.at(-1),undefined);
 });
+test('pitchless taps score each note start once, including chords',()=>{
+ const events=[{beat:0,notes:[40,52]},{beat:1,notes:[43]},{beat:1,notes:[55]},{beat:2,notes:[]},{beat:3,notes:[45]}];
+ const r=new RhythmCheck(events,60,'balanced',{pitchless:true});assert.equal(r.expected.length,3);
+ assert.equal(r.hit(null,-2).kind,'ignored');assert.equal(r.hit(null,.05).kind,'on time');assert.equal(r.hit(null,.1).kind,'extra','a second tap on the same chord is extra');
+ assert.equal(r.hit(null,1.4).kind,'late');const s=r.summary();assert.deepEqual([s.onTime,s.late,s.missed,s.extra,s.wrong],[1,1,1,1,0]);
+});

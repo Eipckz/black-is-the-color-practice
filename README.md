@@ -14,6 +14,17 @@ Start timer (or playback) measures active practice. Rating pauses the timer; Nex
 
 By default the whole score is shown: the section you are practicing stays at full strength and every other measure is dimmed, with real measure numbers on each system. Whenever the section changes (next round, section choice, a tapped bar, a custom range, a stage switch) the score scrolls so the section's first system sits at the top of the score area. In compact view and on phones the score has its own scroll area of about half the screen (less on short screens) so the transport, guide and rating buttons stay visible; choose full length or three quarters in settings, or turn off scrolling to the section. Moving to a new section only changes the dimming and highlighting; the notation is not redrawn. For very long scores on slow devices choose Show: measures around the section (4–16 measures), or the current section only. Playback, highlighting, Previous/Next notes, MIDI and microphone checks stay inside the section. Tap a dimmed measure to practice that measure on its own.
 
+## Help for beginners
+
+All of these are in Settings and switched on by the Beginner preset:
+
+- **Note names on noteheads**: letters (C D E) or fixed do (Do Re Mi), written as spelled in the score, so F♯ never reads G♭. They dim and highlight with their notes; printing them is optional.
+- **Keyboard under the score**: the on-screen keyboard sits directly below the notation, lights the keys to play now and outlines the next ones.
+- **Tap the rhythm** (its own panel): after the count-in, tap each note start on a big button or with Space. Each start is scored on time, early, late or missed, with no piano or microphone.
+- **Tempo ramp**: after two clean rounds in a row a passage comes back one tempo step faster, up to a target (the marked tempo when the score has one). Each passage remembers its own tempo; the round label shows ♩ = current → target.
+- **Counting labels**: with eighth-note metronome clicks the beat indicator reads 1 & 2 & …; compound meters show six (or nine, twelve) boxes with each group's first beat accented.
+- **Starting hint**: the section's hint is shown above the score for a passage's first three rounds.
+
 ## Settings
 
 Open **⚙ Settings** in the header (or press the comma key) for every option, grouped into Score, Sound & playback, Practice flow, Display, Shortcuts and Your data. Each control is tagged **this piece** (saved with the piece's progress) or **all pieces** (saved for this device: theme, colours, text size, microphone octave check, daily goal, shortcuts). The Sound & quick settings panel under the score keeps only what you change mid-practice: volume, hand balance with Hear LH / RH / Both, count-in and metronome.

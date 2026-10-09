@@ -122,3 +122,27 @@ html{scroll-padding-top:120px}
 [data-ui-scale=small] body{zoom:.9}
 [data-ui-scale=large] body{zoom:1.15}
 @media(max-width:640px){.settings-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.settings-tabs{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.settings-tabs button{white-space:nowrap}.settings-panel{grid-template-columns:1fr}}
+/* Beginner aids */
+#notation .note-name{pointer-events:none}
+#notation .note-name text{fill:#fff;stroke:none;font:600 7.5px Arial,Helvetica,sans-serif}
+#notation .note-name rect{fill:#24332e;stroke:none}
+#notation .is-current .note-name rect{fill:var(--rh)}
+.one-colour #notation .is-current .note-name rect{fill:var(--rh)}
+#notation .is-current[data-voice="left"] .note-name rect{fill:var(--lh)}
+.one-colour #notation .is-current[data-voice="left"] .note-name rect{fill:var(--rh)}
+@media print{body:not(.print-note-names) #notation .note-name{display:none}#notation .note-name rect{fill:#000!important}}
+.keyboard-strip{border:0;padding:2px 0;margin:2px 0}
+.keyboard-strip>summary{font-size:12px;color:var(--muted)}
+.keyboard-strip .keyboard-wrap{padding:6px 0}
+#keyboard .is-next:not(.lit){box-shadow:inset 0 0 0 3px var(--rh)}
+#keyboard .black.is-next:not(.lit){box-shadow:inset 0 0 0 3px #fff}
+.auto-hint{margin:0 0 8px;padding:8px 12px;border-radius:8px;background:var(--sage);font-size:14px;line-height:1.45}
+.beat-bar span.accent{font-weight:700}
+.beat-bar.subdivided span:not(.accent){opacity:.75}
+.tap-button{display:block;width:100%;min-height:120px;margin:12px 0;font-size:28px;border-radius:16px;background:var(--green);color:#fff;border:0;touch-action:manipulation;user-select:none}
+.tap-button:disabled{opacity:.4}
+.tap-button.pulse{animation:tap .18s ease-out}
+@keyframes tap{from{transform:scale(.96)}to{transform:none}}
+.tap #tapStart{width:100%}
+@media print{.keyboard-strip,.auto-hint{display:none!important}}
+@media(prefers-reduced-motion:reduce){.tap-button.pulse{animation:none}}

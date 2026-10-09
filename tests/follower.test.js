@@ -48,3 +48,10 @@ test('an imported key change applies from its measure',async()=>{
  const [first,second]=s.voices[0].events.filter(e=>e.notes.length);
  assert.equal(alteredNoteHeads(first,s.measureKeys[0])[0].kind,'key');assert.equal(alteredNoteHeads(second,s.measureKeys[1])[0].kind,'chromatic');
 });
+test('note names follow the written spelling in letters or fixed do',async()=>{
+ const {spelledNotes,noteLabel}=await import('../follower.js');
+ const [fs]=spelledNotes({notes:[54],spellings:[{step:'F',octave:3,alter:1}]},1);assert.equal(noteLabel(fs),'F♯');assert.equal(noteLabel(fs,'solfege'),'Fa♯');
+ assert.equal(noteLabel(spelledNotes({notes:[54]},-2)[0]),'G♭','unspelled notes in flat keys use flats');
+ assert.equal(noteLabel(spelledNotes({notes:[54]},1)[0]),'F♯');
+ assert.deepEqual(spelledNotes({notes:[48,67]},0).map(p=>p.name),['C,','G']);
+});

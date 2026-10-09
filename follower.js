@@ -17,10 +17,18 @@ export function stepBeat(cues,beat,direction){
  const beats=[...new Set(cues.map(e=>e.beat))].sort((a,b)=>a-b);
  return direction>0?(beats.find(b=>b>beat+1e-6)??beats.at(-1)):(beats.findLast(b=>b<beat-1e-6)??beats[0]);
 }
-// Written pitch spelling of noteheads the player must notice: alterations from the key signature
-// (kind 'key') and accidentals against it, including naturals that cancel it (kind 'chromatic').
-// Unspelled built-in notes are spelled with sharps in sharp keys and flats otherwise.
-export function alteredNoteHeads(event,fifths=0){
- const flats=[['C',0],['C',1],['D',0],['E',-1],['E',0],['F',0],['F',1],['G',0],['A',-1],['A',0],['B',-1],['B',0]],sharps=[['C',0],['C',1],['D',0],['D',1],['E',0],['F',0],['F',1],['G',0],['G',1],['A',0],['A',1],['B',0]];
- return event.notes.map((midi,i)=>{const [step,alter]=(fifths>0?sharps:flats)[midi%12];const p=event.spellings?.[i]||{step,alter,octave:Math.floor(midi/12)-1},inKey=keyAlter(p.step,fifths);if(p.alter===0&&inKey===0)return null;const kind=p.alter===inKey?'key':'chromatic';return {name:p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave)),alter:p.alter,kind,label:p.step+(p.alter>0?' sharp'.repeat(p.alter):p.alter<0?' flat'.repeat(-p.alter):' natural')+' '+p.octave+(kind==='key'?' (key signature)':' (accidental)')};}).filter(Boolean);
+// Written spelling of every note in an event, with the abcjs notehead name. Imported scores carry
+// their spelling; unspelled built-in notes use sharps in sharp keys, flats in flat keys, and the usual
+// C-major mix (C sharp, E flat, F sharp, A flat, B flat) otherwise.
+export function spelledNotes(event,fifths=0){
+ const flats=[['C',0],['C',1],['D',0],['E',-1],['E',0],['F',0],['F',1],['G',0],['A',-1],['A',0],['B',-1],['B',0]],sharps=[['C',0],['C',1],['D',0],['D',1],['E',0],['F',0],['F',1],['G',0],['G',1],['A',0],['A',1],['B',0]],pureFlats=[['C',0],['D',-1],['D',0],['E',-1],['E',0],['F',0],['G',-1],['G',0],['A',-1],['A',0],['B',-1],['B',0]];
+ return event.notes.map((midi,i)=>{const [step,alter]=(fifths>0?sharps:fifths<0?pureFlats:flats)[midi%12];const p=event.spellings?.[i]||{step,alter,octave:Math.floor(midi/12)-1};return {step:p.step,alter:p.alter,octave:p.octave,name:p.octave>=5?p.step.toLowerCase()+"'".repeat(p.octave-5):p.step+','.repeat(Math.max(0,4-p.octave))};});
 }
+// Noteheads the player must notice: alterations from the key signature (kind 'key') and accidentals
+// against it, including naturals that cancel it (kind 'chromatic').
+export function alteredNoteHeads(event,fifths=0){
+ return spelledNotes(event,fifths).map(p=>{const inKey=keyAlter(p.step,fifths);if(p.alter===0&&inKey===0)return null;const kind=p.alter===inKey?'key':'chromatic';return {name:p.name,alter:p.alter,kind,label:p.step+(p.alter>0?' sharp'.repeat(p.alter):p.alter<0?' flat'.repeat(-p.alter):' natural')+' '+p.octave+(kind==='key'?' (key signature)':' (accidental)')};}).filter(Boolean);
+}
+const solfege={C:'Do',D:'Re',E:'Mi',F:'Fa',G:'Sol',A:'La',B:'Si'};
+// Letter or fixed-do name for a spelled note, with its written sharps or flats.
+export const noteLabel=(p,style='letters')=>(style==='solfege'?solfege[p.step]:p.step)+(p.alter>0?'♯'.repeat(p.alter):p.alter<0?'♭'.repeat(-p.alter):'');
