@@ -92,3 +92,9 @@ test('loop points cover both chosen notes in either order and fall back to the w
   assert.deepEqual(nextLoopPoints(p,3,4).b,null,'a third choice starts again');
   assert.deepEqual(loopRange({},8),{a:0,b:8});assert.deepEqual(loopRange({a:9,b:12},8),{a:0,b:8},'stale points are ignored');
 });
+
+test('own section names and goals and edited targets are validated',()=>{
+  const s=freshState({sectionText:{'2/0':{name:'Opening','goal':'Count the rests'},'3/1':{name:'x',goal:''},'2/1':{name:5}},targetsEdited:'yes'},sections,12);
+  assert.deepEqual(s.sectionText,{'2/0':{name:'Opening',goal:'Count the rests'}});assert.equal(s.targetsEdited,false);
+  assert.equal(freshState({targetsEdited:true},sections,12).targetsEdited,true);
+});

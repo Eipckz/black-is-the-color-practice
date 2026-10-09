@@ -179,3 +179,17 @@ html{scroll-padding-top:120px}
 .performance-bar{position:fixed;right:12px;bottom:12px;z-index:40;display:flex;gap:6px;padding:6px;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px #0003}
 .performance-bar button{min-width:52px}
 @media print{.performance-bar{display:none!important}}
+/* Dim and highlight styles */
+#notation[data-dim-style=grey] .context{opacity:calc(1 - var(--dim)*.55);fill:#8b938f;stroke:#8b938f}
+#notation[data-dim-style=blur] .context{opacity:calc(1 - var(--dim)*.5);filter:blur(.9px)}
+#notation[data-highlight-style=outline] .is-current,#notation[data-highlight-style=cursor] .is-current{fill:inherit!important;stroke:inherit!important}
+#notation[data-highlight-style=outline] .is-current{outline:2px solid var(--rh);outline-offset:2px;border-radius:3px}
+#notation[data-highlight-style=outline] .is-current[data-voice="left"]{outline-color:var(--lh)}
+.one-colour #notation[data-highlight-style=outline] .is-current[data-voice="left"]{outline-color:var(--rh)}
+#notation[data-highlight-style=outline] .is-current .abcjs-notehead.altered-key,#notation[data-highlight-style=cursor] .is-current .abcjs-notehead.altered-key{fill:var(--acc-key)!important}
+#notation[data-highlight-style=outline] .is-current .abcjs-notehead.altered-chromatic,#notation[data-highlight-style=cursor] .is-current .abcjs-notehead.altered-chromatic{fill:var(--acc-chromatic)!important}
+#notation .beat-cursor{stroke:var(--rh);stroke-width:2;opacity:.8;pointer-events:none}
+.section-editor{display:grid;gap:10px;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:8px}
+.section-editor label{display:grid;gap:6px;font-size:13px;font-weight:600}
+.section-editor input,.section-editor textarea{font:inherit;font-weight:400;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--white);color:var(--ink)}
+@media print{#notation .beat-cursor{display:none}}

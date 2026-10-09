@@ -1,4 +1,4 @@
-import {defaults,validate} from './settings.js?v=7';
+import {defaults,validate} from './settings.js?v=8';
 import {validHistory} from './estimate.js?v=11';
 export const phases = ['learn', 'mix', 'polish', 'perform'];
 export function makeSections(measures, size=2) {
@@ -40,6 +40,10 @@ export function freshState(saved={}, sections, measures, pieceDefaults={}) {
   state.history=validHistory(state.history);
   const stats=state.measureStats&&typeof state.measureStats==='object'&&!Array.isArray(state.measureStats)?state.measureStats:{};
   state.measureStats=Object.fromEntries(Object.entries(stats).filter(([m,v])=>Number.isInteger(Number(m))&&m>=1&&m<=measures&&v&&Number.isFinite(v.acc)&&v.acc>=0&&v.acc<=1).map(([m,v])=>[m,{acc:v.acc,n:Math.max(1,Math.round(v.n)||1),t:Number(v.t)||0}]));
+  // Section names and goals the player wrote for an imported piece, keyed by section size and index.
+  const text=state.sectionText&&typeof state.sectionText==='object'&&!Array.isArray(state.sectionText)?state.sectionText:{};
+  state.sectionText=Object.fromEntries(Object.entries(text).filter(([k,v])=>/^[124]\/\d+$/.test(k)&&v&&typeof v.name==='string'&&typeof v.goal==='string').map(([k,v])=>[k,{name:v.name.slice(0,80),goal:v.goal.slice(0,300)}]));
+  state.targetsEdited=state.targetsEdited===true;
   // Trouble-spot flags: measure numbers the player marked.
   state.flags=[...new Set((Array.isArray(state.flags)?state.flags:[]).filter(m=>Number.isInteger(m)&&m>=1&&m<=measures))].sort((a,b)=>a-b);
   const notes=state.notes&&typeof state.notes==='object'&&!Array.isArray(state.notes)?state.notes:{};
