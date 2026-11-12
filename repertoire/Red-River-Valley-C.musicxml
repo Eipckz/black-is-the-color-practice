@@ -550,17 +550,6 @@
       <note>
         <chord />
         <pitch>
-          <step>D</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>32</duration>
-        <voice>2</voice>
-        <type>whole</type>
-        <staff>2</staff>
-      </note>
-      <note>
-        <chord />
-        <pitch>
           <step>F</step>
           <octave>3</octave>
         </pitch>
@@ -945,17 +934,6 @@
         <pitch>
           <step>B</step>
           <octave>2</octave>
-        </pitch>
-        <duration>32</duration>
-        <voice>2</voice>
-        <type>whole</type>
-        <staff>2</staff>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>D</step>
-          <octave>3</octave>
         </pitch>
         <duration>32</duration>
         <voice>2</voice>

@@ -185,6 +185,6 @@ The one-beat pickup has no left-hand chord. Printed measure numbers exclude it; 
 | 7 | V7, whole note |
 | 8 | I, dotted half note |
 
-B-flat voicings, bottom to top: I = Bb2 D3 F3; V7 = A2 C3 Eb3 F3 (first inversion); V7/IV = Bb2 D3 F3 Ab3; IV = Bb2 Eb3 G3 (second inversion). The A-flat atop V7/IV follows the handwritten correction. The melody retains G4 to Gb4 in measure 6 and both written ties. The C-major copy raises every note by a diatonic major second, including Gb to Ab. Allegro is printed without a number; 112 BPM is an editorial playback tempo and can be slowed in the app.
+B-flat voicings, bottom to top: I = Bb2 D3 F3; V7 = A2 Eb3 F3 (first inversion); V7/IV = Bb2 D3 F3 Ab3; IV = Bb2 Eb3 G3 (second inversion). The A-flat atop V7/IV follows the handwritten correction. The melody retains G4 to Gb4 in measure 6 and both written ties. The C-major copy raises every note by a diatonic major second, including Gb to Ab. Allegro is printed without a number; 112 BPM is an editorial playback tempo and can be slowed in the app.
 
 Canonical editable sources: `repertoire/Red-River-Valley-Bb.musicxml` and `repertoire/Red-River-Valley-C.musicxml`. Rebuild with Python and music21 using `python scripts/build-red-river.py`. Roman numerals are notation labels, with all sounding accompaniment supplied by the written left-hand notes. No extra automatic chords are generated.

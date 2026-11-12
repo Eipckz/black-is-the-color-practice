@@ -561,17 +561,6 @@
       <note>
         <chord />
         <pitch>
-          <step>C</step>
-          <octave>3</octave>
-        </pitch>
-        <duration>32</duration>
-        <voice>2</voice>
-        <type>whole</type>
-        <staff>2</staff>
-      </note>
-      <note>
-        <chord />
-        <pitch>
           <step>E</step>
           <alter>-1</alter>
           <octave>3</octave>
@@ -965,17 +954,6 @@
         <pitch>
           <step>A</step>
           <octave>2</octave>
-        </pitch>
-        <duration>32</duration>
-        <voice>2</voice>
-        <type>whole</type>
-        <staff>2</staff>
-      </note>
-      <note>
-        <chord />
-        <pitch>
-          <step>C</step>
-          <octave>3</octave>
         </pitch>
         <duration>32</duration>
         <voice>2</voice>
