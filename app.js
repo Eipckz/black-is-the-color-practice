@@ -34,7 +34,32 @@ let sections=builtinSections, storageKey=progressKey(activeId), state;
 const pieceDefaults=()=>{try{return JSON.parse(localStorage.getItem('piano-piece-defaults')||'{}')||{};}catch{return {};}};
 // Imported pieces: the player's own names and goals replace the generated ones.
 function applySectionText(){if(activeId===BUILTIN)return;const generated=makeSections(score.measures,state.sectionSize);sections.forEach((s,i)=>{if(i===sections.length-1)return;const own=state.sectionText[state.sectionSize+'/'+i];s.name=own?.name||generated[i].name;s.goal=own?.goal||generated[i].goal;});}
-function loadState(){let stored={};try{stored=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{}if(activeId!==BUILTIN)sections=makeSections(score.measures,[1,2,4].includes(stored.sectionSize)?stored.sectionSize:2);state=freshState(stored,sections,score.measures,pieceDefaults());if(activeId===BUILTIN)state.sectionSize=2;if(!Object.hasOwn(stored,'rampTarget')&&score.tempo)state.rampTarget=validate('rampTarget',score.tempo);state.practiceTiming=timingState(stored.practiceTiming);applySectionText();}
+const riverPlan=[
+ ['4','6','left','Chord changes','Play V7 once in m. 4. In m. 5 play I on beat 1, then V7/IV on beat 3. Land on IV on beat 1 of m. 6.'],
+ ['4','6','both','Add the melody','Count through the dotted half in m. 4. Let the right hand play the two eighths on “4 and” while the left waits for beat 1.'],
+ ['Pickup','3','both','Connect the opening','Begin with the right hand alone. In m. 2, sing the beat-4 pickup into the downbeat of m. 3 before playing that join.'],
+ ['4','5','both','Cross the system break','Look at the first chord of the second line while the dotted half sounds. Sing “4 and ONE,” then play across the line without adding a beat.'],
+ ['6','8','both','Connect the ending','In m. 6, carry the two eighths on beat 4 into the printed V7 on the next downbeat. Hold the final I for three beats.'],
+ ['Pickup','8','both','Play the whole piece','Keep the beat through all three joins. If one catches, return to its step and practice the arrival.']
+];
+const isRiver=()=>bundled.entries.some(e=>e.id===activeId && /^Red-River-Valley-(Bb|C)\.musicxml$/i.test(e.filename));
+const guideBar=label=>score.printedMeasures.indexOf(label)+1;
+function setGuide(i){
+ const [a,b,hand]=riverPlan[i];switchStage(state,hand==='left'?'learn':'mix');
+ state.hand=hand;state.customStart=guideBar(a);state.customEnd=guideBar(b);state.section=sections.length-1;state.riverStep=i;
+}
+function showGuide(){
+ const box=$('riverGuide');box.hidden=!isRiver();if(box.hidden)return;
+ const select=$('guideStep');
+ if(!select.options.length){select.add(new Option('Choose a guided step',''));riverPlan.forEach(([a,b,h,title],i)=>select.add(new Option((i+1)+'. '+title+' · '+(a==='Pickup'?'Pickup':'m. '+a)+' to m. '+b,String(i))));}
+ const i=state.riverStep,step=riverPlan[i];
+ const matches=step&&state.section===sections.length-1&&state.customStart===guideBar(step[0])&&state.customEnd===guideBar(step[1])&&state.hand===step[2];
+ select.value=matches?String(i):'';$('guideCue').textContent=matches?step[4]:'Choose a step to resume guided practice.';
+ $('guideNext').disabled=matches&&i===riverPlan.length-1;
+}
+$('guideStep').onchange=e=>{if(e.target.value!==''){setGuide(Number(e.target.value));render();}};
+$('guideNext').onclick=()=>{setGuide($('guideStep').value===''?0:Math.min(riverPlan.length-1,Number($('guideStep').value)+1));render();};
+function loadState(){let stored={};try{stored=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch{}if(activeId!==BUILTIN)sections=makeSections(score.measures,[1,2,4].includes(stored.sectionSize)?stored.sectionSize:2);state=freshState(stored,sections,score.measures,pieceDefaults());if(activeId===BUILTIN)state.sectionSize=2;if(!Object.hasOwn(stored,'rampTarget')&&score.tempo)state.rampTarget=validate('rampTarget',score.tempo);state.practiceTiming=timingState(stored.practiceTiming);applySectionText();if(isRiver()){if(Number.isInteger(stored.riverStep)&&riverPlan[stored.riverStep])state.riverStep=stored.riverStep;else{setGuide(0);state.tempo=50;}}}
 loadState();
 const today=()=>new Date().toLocaleDateString('en-CA');
 let daily=dailyState();try{daily=dailyState(JSON.parse(localStorage.getItem('piano-daily')||'{}'));}catch{}
@@ -80,8 +105,9 @@ function excerpt(w,{bars,width}){if(score.imported)return importedExcerpt(score,
 function decorateScore(w){const n=$('notation');n.style.setProperty('--dim',state.contextDim/100);n.dataset.dimStyle=state.dimStyle;n.dataset.highlightStyle=state.highlightStyle;n.querySelectorAll('.context').forEach(e=>e.classList.remove('context'));drawFlags(w);drawHeat(w);for(const t of n.querySelectorAll('.abcjs-bar-number'))t.textContent=measureLabel(w.start+Number(t.getAttribute('class').match(/abcjs-mm(\d+)/)[1]));for(const m of contextMeasures(w,section()))n.querySelectorAll('.abcjs-mm'+(m-w.start)).forEach(e=>e.classList.add('context'));applyMemorize(w);}
 function fingers(e){if(score.imported)return e.fingers.filter(Boolean).join(' + ');if(e.voice==='left')return e.fingers.join(' + ');const n=e.notes.join(',');const single={52:'1',47:'1',57:'1',55:'1',54:'1',48:'1'};const chords={'55,59':'3 + 5','50,54':'3 + 5','60,64':'3 + 5','57,62':'2 + 5','59,64':'3 + 5','52,55,59':'1 + 3 + 5','50,55,59':'1 + 3 + 5','52,55':'3 + 5'};return e.notes.length===1?single[n]||'':chords[n]||'';}
 function render(){
+ showGuide();
  renderEstimate();
- stopAudio();stopMic();const custom=sections.length-1;sections[custom].start=state.customStart||1;sections[custom].end=state.customEnd||Math.min(2,score.measures);if(state.phase==='perform')state.section=sections.length-2;save();$('section').disabled=state.phase==='perform';$('applyRange').disabled=state.phase==='perform';$('section').options[custom].textContent='mm. '+sections[custom].start+'-'+sections[custom].end+' · Your measure range';$('section').value=state.section;$('hand').value=state.hand;$('tempo').value=state.tempo;$('bpmLabel').textContent=state.tempo+' BPM';for(const name of ['volume','leftVolume','rightVolume']){$(name).value=state[name]??75;$(name+'Label').textContent=$(name).value+'%';}$('sectionNotes').value=state.notes[recordKey(state,state.section,state.hand)]||'';$('notesScope').textContent=section().name+' · '+handLabel();$('rangeStart').value=section().start;$('rangeEnd').value=section().end;$('seek').max=sectionLength();beatBarFor(meterOf(section().start));updatePosition(0);
+ stopAudio();stopMic();const custom=sections.length-1;sections[custom].start=state.customStart||1;sections[custom].end=state.customEnd||Math.min(2,score.measures);if(state.phase==='perform')state.section=sections.length-2;save();$('section').disabled=state.phase==='perform';$('applyRange').disabled=state.phase==='perform';$('section').options[custom].textContent='mm. '+measureLabel(sections[custom].start)+' to '+measureLabel(sections[custom].end)+' · Your measure range';$('section').value=state.section;$('hand').value=state.hand;$('tempo').value=state.tempo;$('bpmLabel').textContent=state.tempo+' BPM';for(const name of ['volume','leftVolume','rightVolume']){$(name).value=state[name]??75;$(name+'Label').textContent=$(name).value+'%';}$('sectionNotes').value=state.notes[recordKey(state,state.section,state.hand)]||'';$('notesScope').textContent=section().name+' · '+handLabel();$('rangeStart').value=section().start;$('rangeEnd').value=section().end;$('seek').max=sectionLength();beatBarFor(meterOf(section().start));updatePosition(0);
  $('performanceMode').hidden=state.phase!=='perform';if(state.phase!=='perform')exitPerformance();document.body.classList.toggle('show-recorder',display.recorder);
  document.querySelectorAll('[data-phase]').forEach(b=>{b.classList.toggle('selected',b.dataset.phase===state.phase);b.setAttribute('aria-pressed',String(b.dataset.phase===state.phase));});
  $('roundLabel').textContent=roundText();
