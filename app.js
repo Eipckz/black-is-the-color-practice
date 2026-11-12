@@ -2,11 +2,11 @@ import {timingState,recordTimedRound,estimatePractice,timeText,dailyState,addPra
 import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWindow} from './midi.js?v=8';
 import {makeCues,cueState,stepBeat,alteredNoteHeads,spelledNotes,noteLabel} from './follower.js?v=15';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=6';
-import {loadRepertoire,mergeRepertoire} from './repertoire.js?v=2';
+import {loadRepertoire,mergeRepertoire} from './repertoire.js?v=3';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern,nextLoopPoints,loopRange} from './practice.js?v=21';
 import {renderWindow,contextMeasures,lineBars,firstSectionNode} from './view.js?v=3';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=24';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=25';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore,listRecordings,storeRecording,deleteRecording,deleteRecordings} from './library.js?v=13';
 import {settings,settingByKey,groups,validate,actions,validKeys,presets,matchingPreset} from './settings.js?v=8';
 const bundled = await loadRepertoire();
@@ -125,6 +125,14 @@ function render(){
  document.body.classList.toggle('short-excerpt',state.scoreView==='section'&&section().end-section().start<2);
  document.body.dataset.scoreHeight=state.scoreHeight==='auto'?(document.body.classList.contains('focus-mode')||matchMedia('(max-width:600px)').matches?'half':'fit'):state.scoreHeight;
  try{const w=scoreWindow(),size=layout(w),abc=excerpt(w,size),text=document.body.classList.contains('focus-mode')?abc.replace(/^T:.*\n/m,''):abc;
+ const vocal=$('vocalLine');
+ vocal.hidden=!score.vocalLine;
+ if(score.vocalLine){
+  const tune=importedExcerpt(score.vocalLine,'right',w.start,w.end,false,{...size,expression:true})
+   .replace(/^T:.*\n/m,'').replace('name="RH"','name="Melody"');
+  const words=score.vocalLine.lyrics.slice(w.start-1,w.end).flat().join(' ');
+  ABCJS.renderAbc(vocal,tune+'w: '+words+'\n',{responsive:'resize',staffwidth:size.width,add_classes:true});
+ }else vocal.replaceChildren();
  // Only re-engrave when the notation itself changes; a new section only changes dimming, cues and scroll.
  if(text+'|'+size.width!==renderedAbc||!$('notation').querySelector('svg')){const started=performance.now();ABCJS.renderAbc('notation',text,{responsive:'resize',staffwidth:size.width,add_classes:true,paddingright:10,paddingleft:10});renderedAbc=text+'|'+size.width;if(state.scoreView==='piece'&&performance.now()-started>400)$('libraryStatus').textContent='This long score takes a moment to draw. For faster section changes choose Show: measures around the section.';}
  decorateScore(w);bindCues(w);systemBounds=new Map();drawNoteNames();showLoop();scrollToSection(w);}catch(error){renderedAbc=null;$('notation').textContent='Notation could not render. Use the PDF download below.';console.error(error);}
@@ -236,7 +244,7 @@ function fillSelectors(){
  for(const id of ['rangeStart','rangeEnd']){$(id).replaceChildren();for(let i=1;i<=score.measures;i++)$(id).append(new Option(i,i));}
  $('pieceTitle').textContent=score.title;$('tempoMark').hidden=!score.tempo;$('markedTempoValue').textContent=score.tempo?'Marked tempo ♩ = '+score.tempo:'';$('measureCount').textContent=score.measures+' measures';$('brandTitle').textContent=score.title;
  $('scoreNotes').textContent=score.imported?'Imported piano score. Printed fingerings are retained where supplied. Playback counts quarter-note beats.':'Both accompaniment staves use bass clef. Middle C = C4. The top melody is a separate part.';
- $('melody').checked=false;$('melody').parentElement.hidden=!!score.imported;
+ $('melody').checked=!!score.vocalLine;$('melody').parentElement.hidden=score.imported&&!score.vocalLine;
  document.querySelectorAll('a[href^="Black-Is-the-Color"]').forEach(a=>a.hidden=!!score.imported);
  $('libraryWarnings').textContent=(score.warnings||[]).join(' ');$('downloadScore').hidden=!score.imported;$('removeScore').hidden=!score.imported||!!library.find(e=>e.id===activeId)?.bundled;
 }

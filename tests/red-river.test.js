@@ -40,9 +40,9 @@ test('Roman chord labels engrave below the left hand without automatic accompani
 });
 test('bundled repertoire shares import identities, merges without duplicates, and tolerates one failed file',async()=>{
  const fetcher=async url=>({ok:true,text:async()=>fs.readFileSync(url,'utf8')});
- const {entries,warnings}=await loadRepertoire(fetcher,DOMParser);assert.equal(entries.length,2);assert.equal(warnings.length,0);
+ const {entries,warnings}=await loadRepertoire(fetcher,DOMParser);assert.equal(entries.length,3);assert.equal(warnings.length,0);
  const saved=[{...entries[0],bundled:undefined},{id:'user',score:{title:'Own piece'}}];
- const merged=mergeRepertoire(saved,entries);assert.equal(merged.length,3);assert.equal(merged[0].bundled,true);assert.equal(merged[1].id,'user');
+ const merged=mergeRepertoire(saved,entries);assert.equal(merged.length,4);assert.equal(merged[0].bundled,true);assert.equal(merged[1].id,'user');
  const partial=await loadRepertoire(async url=>url.pathname.endsWith('-C.musicxml')?{ok:false,status:503}:fetcher(url),DOMParser);
- assert.equal(partial.entries.length,1);assert.equal(partial.warnings.length,1);
+ assert.equal(partial.entries.length,2);assert.equal(partial.warnings.length,1);
 });
