@@ -137,12 +137,15 @@ function tupletAt(events,index,compound){
 }
 // The abcjs voices for a hand, in staff order: one per staff, or one per MusicXML voice when layout.separate.
 export function excerptVoices(score,hand,separate=false){
-  return (hand==='both'?['right','left']:[hand]).flatMap(staff=>{const parts=separate?score.voiceParts?.[staff]:null;return parts?parts.map((p,i)=>({key:staff+(i+1),staff,events:p.events,secondary:i>0,stem:i?'down':'up',first:!i})):[{key:staff,staff,events:score.voices.find(v=>v.id===staff).events,secondary:false,first:true}];});
+  const hands=score.vocalLine || hand==='both' ? ['right','left'] : [hand];
+  const piano=hands.flatMap(staff=>{const parts=separate?score.voiceParts?.[staff]:null;return parts?parts.map((p,i)=>({key:staff+(i+1),staff,events:p.events,secondary:i>0,stem:i?'down':'up',first:!i})):[{key:staff,staff,events:score.voices.find(v=>v.id===staff).events,secondary:false,first:true}];});
+  if(!score.vocalLine)return piano;
+  return [{key:'melody',staff:'melody',events:score.voices.find(v=>v.id==='melody').events,first:true},...piano];
 }
 export function importedExcerpt(score,hand,start,end,large=false,layout={}){
-  const ids=hand==='both'?['right','left']:[hand],starts=measureStarts(score),meterAt=m=>score.meters?.[m-1]??score.meter,lines=excerptVoices(score,hand,layout.separate),group=staff=>{const keys=lines.filter(l=>l.staff===staff).map(l=>l.key);return keys.length>1?'('+keys.join(' ')+')':keys[0];};
-  let abc=`X:1\nT:Measures ${start}-${end}\nM:${meterAt(start)}\nL:1/4\n%%score ${ids.length===2?'{ '+group('right')+' '+group('left')+' }':group(ids[0])}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
-  for(const l of lines)abc+=`V:${l.key} clef=${score.clefs[l.staff]}`+(l.first?` name="${l.staff==='right'?'RH':'LH'}"`:'')+(l.stem?' stem='+l.stem:'')+'\n';
+  const ids=score.vocalLine || hand==='both'?['right','left']:[hand],starts=measureStarts(score),meterAt=m=>score.meters?.[m-1]??score.meter,lines=excerptVoices(score,hand,layout.separate),group=staff=>{const keys=lines.filter(l=>l.staff===staff).map(l=>l.key);return keys.length>1?'('+keys.join(' ')+')':keys[0];};
+  let abc=`X:1\nT:Measures ${start}-${end}\nM:${meterAt(start)}\nL:1/4\n%%score ${score.vocalLine?'melody ':''}${ids.length===2?'{ '+group('right')+' '+group('left')+' }':group(ids[0])}\n%%barsperstaff ${layout.bars??(large?1:2)}\n%%staffwidth ${layout.width??(large?300:540)}\n%%stretchlast 1\n%%measurenb 0\n%%setbarnb 2\n`;
+  for(const l of lines)abc+=`V:${l.key} clef=${l.staff==='melody'?'treble':score.clefs[l.staff]}`+(l.first?` name="${l.staff==='melody'?'Melody':l.staff==='right'?'RH':'LH'}"`:'')+(l.stem?' stem='+l.stem:'')+'\n';
   const openingKey=score.measureKeys?.[start-1]??0;
   abc+='K:'+keyNames[openingKey+7]+'\n';
   for(const {key,staff:id,events,secondary,first:primary} of lines){abc+=`[V:${key}] `;const marks=layout.expression&&primary?score.expressions?.[id]||[]:[];
@@ -169,6 +172,7 @@ export function importedExcerpt(score,hand,start,end,large=false,layout={}){
         abc+=expression+slurOpen+fingering+arts+(tokens.length>1?'['+tokens.join('')+']':tokens[0].replace(/-$/,''))+fraction(duration)+(tokens.length===1&&tokens[0].endsWith('-')?'-':'')+slurClose+separator;
       }abc+='| ';
     }abc+='\n';
+    if(id==='melody')abc+='w: '+score.vocalLine.lyrics.slice(start-1,end).flat().join(' ')+'\n';
   }return abc;
 }
 export async function readMusicXMLFile(file){

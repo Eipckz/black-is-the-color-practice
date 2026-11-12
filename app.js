@@ -6,7 +6,7 @@ import {loadRepertoire,mergeRepertoire} from './repertoire.js?v=3';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern,nextLoopPoints,loopRange} from './practice.js?v=21';
 import {renderWindow,contextMeasures,lineBars,firstSectionNode} from './view.js?v=3';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=25';
+import {excerptVoices,parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=26';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore,listRecordings,storeRecording,deleteRecording,deleteRecordings} from './library.js?v=13';
 import {settings,settingByKey,groups,validate,actions,validKeys,presets,matchingPreset} from './settings.js?v=8';
 const bundled = await loadRepertoire();
@@ -125,14 +125,6 @@ function render(){
  document.body.classList.toggle('short-excerpt',state.scoreView==='section'&&section().end-section().start<2);
  document.body.dataset.scoreHeight=state.scoreHeight==='auto'?(document.body.classList.contains('focus-mode')||matchMedia('(max-width:600px)').matches?'half':'fit'):state.scoreHeight;
  try{const w=scoreWindow(),size=layout(w),abc=excerpt(w,size),text=document.body.classList.contains('focus-mode')?abc.replace(/^T:.*\n/m,''):abc;
- const vocal=$('vocalLine');
- vocal.hidden=!score.vocalLine;
- if(score.vocalLine){
-  const tune=importedExcerpt(score.vocalLine,'right',w.start,w.end,false,{...size,expression:true})
-   .replace(/^T:.*\n/m,'').replace('name="RH"','name="Melody"');
-  const words=score.vocalLine.lyrics.slice(w.start-1,w.end).flat().join(' ');
-  ABCJS.renderAbc(vocal,tune+'w: '+words+'\n',{responsive:'resize',staffwidth:size.width,add_classes:true});
- }else vocal.replaceChildren();
  // Only re-engrave when the notation itself changes; a new section only changes dimming, cues and scroll.
  if(text+'|'+size.width!==renderedAbc||!$('notation').querySelector('svg')){const started=performance.now();ABCJS.renderAbc('notation',text,{responsive:'resize',staffwidth:size.width,add_classes:true,paddingright:10,paddingleft:10});renderedAbc=text+'|'+size.width;if(state.scoreView==='piece'&&performance.now()-started>400)$('libraryStatus').textContent='This long score takes a moment to draw. For faster section changes choose Show: measures around the section.';}
  decorateScore(w);bindCues(w);systemBounds=new Map();drawNoteNames();showLoop();scrollToSection(w);}catch(error){renderedAbc=null;$('notation').textContent='Notation could not render. Use the PDF download below.';console.error(error);}
@@ -145,20 +137,33 @@ async function audioContext(){if(!context){context=new (window.AudioContext||win
 function click(start,strong){piano.click(start,strong,display.metronomeSound);}
 function clockText(beats){let sec=Math.max(0,Math.round(beats*60/state.tempo));return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0');}
 function updatePosition(beat){const total=sectionLength(),span=loopRange(activeLoop(),total);positionBeat=Math.max(span.a,Math.min(span.b,beat));const m=Math.min(barAt(sectionStart()+positionBeat),section().end),flagged=state.flags.includes(m);$('flagMeasure').setAttribute('aria-pressed',String(flagged));$('flagMeasure').textContent=(flagged?'⚑ Unflag measure ':'⚑ Flag measure ')+m;$('seek').value=positionBeat;$('seek').setAttribute('aria-valuetext','Measure '+Math.min(barAt(sectionStart()+positionBeat),section().end)+', beat '+(Math.floor(beatIn(sectionStart()+positionBeat))+1));$('timeLabel').textContent=clockText(positionBeat)+' / '+clockText(total);}
-function selectedEvents(){let events=eventsFor(score,state.hand,section().start,section().end);if($('melody').checked)events=events.concat(eventsFor(score,'melody',section().start,section().end));return events;}
+function selectedEvents(){let events=eventsFor(score,score.vocalLine?'both':state.hand,section().start,section().end);if(score.vocalLine||$('melody').checked)events=events.concat(eventsFor(score,'melody',section().start,section().end));return events;}
 function voiceLevel(voice){return voice==='left'?(state.leftVolume??70)/100:voice==='right'?(state.rightVolume??80)/100:.65;}
 function highlight(events=[]){const lit=new Set(events.flatMap(e=>e.notes)),left=new Set(events.filter(e=>e.voice==='left').flatMap(e=>e.notes));document.querySelectorAll('#keyboard button').forEach(k=>{const n=Number(k.dataset.note);k.classList.toggle('lit',lit.has(n));k.classList.toggle('left',left.has(n));});}
 // Every rendered note is a cue; only those inside the section drive highlighting and stepping.
 // Tapping a dimmed context note turns its measure into a one-bar practice range.
 function bindCues(w){
- const first=sectionStart(),last=starts[section().end],all=makeCues(separatedVoices()?voiceEventsFor(score,state.hand,w.start,w.end):eventsFor(score,state.hand,w.start,w.end),state.hand,w.start,starts).filter(c=>!c.hidden);cueNodes=new Map();
+ const first=sectionStart(),last=starts[section().end];
+ let all;
+ if(score.vocalLine){
+  // The engraved order is the singing line, then the two accompaniment staves.
+  all=excerptVoices(score,state.hand,separatedVoices()).flatMap((line,voiceIndex)=>{
+   const visible=line.events.filter(e=>e.beat>=starts[w.start-1] && e.beat<starts[w.end]);
+   const events=visible.map(e=>({...e,voice:line.staff,voiceIndex}));
+   return makeCues(events,line.staff,w.start,starts).filter(c=>!line.secondary||c.notes.length);
+  }).sort((a,b)=>a.beat-b.beat||a.voiceIndex-b.voiceIndex);
+ }else{
+  const events=separatedVoices()?voiceEventsFor(score,state.hand,w.start,w.end):eventsFor(score,state.hand,w.start,w.end);
+  all=makeCues(events,state.hand,w.start,starts).filter(c=>!c.hidden);
+ }
+ cueNodes=new Map();
  cues=all.filter(c=>c.beat>=first-1e-6&&c.beat<last-1e-6);
  const inside=new Set(cues);
  for(const cue of all){const node=$('notation').querySelector(cue.selector);if(!node)throw new Error('Score cue is missing: '+cue.selector);cueNodes.set(cue,node);node.dataset.beat=cue.beat;node.dataset.voice=cue.voice;node.style.cursor='pointer';node.style.pointerEvents='bounding-box';let pressTimer=0,longPress=false;node.onpointerdown=()=>{longPress=false;if(!inside.has(cue))return;clearTimeout(pressTimer);pressTimer=setTimeout(()=>{longPress=true;setLoopPoint(cue);},550);};node.onpointerup=node.onpointerleave=()=>clearTimeout(pressTimer);node.onclick=event=>{if(longPress){longPress=false;return;}if(!inside.has(cue))return practiceMeasure(barAt(cue.beat));if(event.shiftKey)setLoopPoint(cue);else seekTo(cue.beat-first);};
  const altered=alteredNoteHeads(cue,score.measureKeys?.[barAt(cue.beat)-1]??0);for(const head of node.querySelectorAll('.abcjs-notehead')){const name=(head.getAttribute('data-name')||'').replace(/^[=^_]+/,'');const pitch=altered.find(p=>p.name===name);if(pitch&&!head.classList.contains('altered-pitch')){head.classList.add('altered-pitch','altered-'+pitch.kind);head.setAttribute('aria-label',pitch.label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=pitch.label;head.append(title);}}
  }
 }
-function cueText(list){return list.length?list.map(e=>(e.voice==='left'?'LH: ':'RH: ')+(e.notes.length?e.notes.map(noteName).join(' + ')+(fingers(e)?' · fingers '+fingers(e):''):'rest')).join(' | '):'End of section';}
+function cueText(list){return list.length?list.map(e=>(e.voice==='melody'?'Melody: ':e.voice==='left'?'LH: ':'RH: ')+(e.notes.length?e.notes.map(noteName).join(' + ')+(fingers(e)?' · fingers '+fingers(e):''):'rest')).join(' | '):'End of section';}
 function markNotes(beat){
  const at=beat<0?{current:[],next:[]}:cueState(cues,beat),mode=state.highlightMode;
  const m=barAt(beat);highlight(at.current);const upcoming=new Set(state.showKeyboard?at.next.flatMap(e=>e.notes):[]);document.querySelectorAll('#keyboard button').forEach(k=>k.classList.toggle('is-next',upcoming.has(Number(k.dataset.note))));
@@ -243,15 +248,15 @@ function fillSelectors(){
  $('section').replaceChildren();for(let i=0;i<sections.length;i++){const o=new Option('mm. '+sections[i].start+'–'+sections[i].end+' · '+sections[i].name,i);$('section').append(o);}
  for(const id of ['rangeStart','rangeEnd']){$(id).replaceChildren();for(let i=1;i<=score.measures;i++)$(id).append(new Option(i,i));}
  $('pieceTitle').textContent=score.title;$('tempoMark').hidden=!score.tempo;$('markedTempoValue').textContent=score.tempo?'Marked tempo ♩ = '+score.tempo:'';$('measureCount').textContent=score.measures+' measures';$('brandTitle').textContent=score.title;
- $('scoreNotes').textContent=score.imported?'Imported piano score. Printed fingerings are retained where supplied. Playback counts quarter-note beats.':'Both accompaniment staves use bass clef. Middle C = C4. The top melody is a separate part.';
- $('melody').checked=!!score.vocalLine;$('melody').parentElement.hidden=score.imported&&!score.vocalLine;
+ $('scoreNotes').textContent=score.vocalLine?'Playback includes the singing line and both piano hands.':score.imported?'Imported piano score. Printed fingerings are retained where supplied. Playback counts quarter-note beats.':'Both accompaniment staves use bass clef. Middle C = C4. The top melody is a separate part.';
+ $('melody').checked=!!score.vocalLine;$('melody').parentElement.hidden=!!score.imported;
  document.querySelectorAll('a[href^="Black-Is-the-Color"]').forEach(a=>a.hidden=!!score.imported);
  $('libraryWarnings').textContent=(score.warnings||[]).join(' ');$('downloadScore').hidden=!score.imported;$('removeScore').hidden=!score.imported||!!library.find(e=>e.id===activeId)?.bundled;
 }
 fillSelectors();
 $('section').onchange=()=>{state.section=Number($('section').value);render();};$('hand').onchange=()=>{state.hand=$('hand').value;render();};$('tempo').oninput=()=>{$('bpmLabel').textContent=$('tempo').value+' BPM';};$('tempo').onchange=()=>{const was=playing,practice=transport?.practice,at=positionBeat;stopAudio(false);state.tempo=Number($('tempo').value);updatePosition(at);save();if(was)play(practice,at,true);};
 document.querySelectorAll('[data-phase]').forEach(b=>b.onclick=()=>{switchStage(state,b.dataset.phase);render();});
-$('showHint').onclick=()=>{$('hint').hidden=false;$('showHint').hidden=true;};$('play').onclick=()=>$('guideStep').value==='3'&&isRiver()?startJoinDrill():play();$('pause').onclick=pausePlayback;$('stop').onclick=()=>{stopAudio();stopMic();};$('countIn').onclick=()=>$('guideStep').value==='3'&&isRiver()?startJoinDrill(true):play(true);$('micStart').onclick=()=>startMic();$('micTest').onclick=()=>startMic(true);$('micStop').onclick=stopMic;
+$('showHint').onclick=()=>{$('hint').hidden=false;$('showHint').hidden=true;};$('play').onclick=()=>$('guideStep').value==='3'&&isRiver()?startJoinDrill():play();$('pause').onclick=pausePlayback;$('stop').onclick=()=>{stopAudio();stopMic();};$('countIn').onclick=()=>$('guideStep').value==='3'&&isRiver()?startJoinDrill(true):play(!score.vocalLine);$('micStart').onclick=()=>startMic();$('micTest').onclick=()=>startMic(true);$('micStop').onclick=stopMic;
 document.querySelectorAll('[data-rating]').forEach(b=>b.onclick=()=>{if(!rateRound(state))return;stopAudio();stopMic();const rating=Number(b.dataset.rating);state.history=addHistory(state.history,[Date.now(),['learn','mix','polish','perform'].indexOf(state.phase),state.section,['left','right','both'].indexOf(state.hand),rating,state.tempo,Math.round(state.practiceTiming.roundSeconds)]);if(state.phase!=='perform')recordTimedRound(state.practiceTiming,rating);renderEstimate();const key=recordKey(state,state.section,state.hand),prev=state.records[key]||{attempts:0,clean:0};prev.attempts++;prev.clean=rating===2?prev.clean+1:0;prev.last=Date.now();prev.tempo=state.tempo;prev.rating=rating;state.records[key]=prev;document.querySelectorAll('[data-rating]').forEach(x=>x.disabled=true);const step=state.tempoStep;$('feedback').textContent=rating===0?(state.autoSlow?'Slowed down '+step+' BPM. Work only the rough change once, then switch sections. Return to this one after another round.':'Work only the rough change once at a tempo you can control, then switch sections. Return to this one after another round.'):rating===1?'Keep the same tempo. Name the stumble, rehearse that transition once, and return after a different section.':prev.clean>=2?'Two clean returns logged. Try '+step+' BPM faster next time, or return tomorrow with the score.':'Clean attempt logged. Switch sections now, then test this one again from the score.';if(rating===0&&state.autoSlow){state.tempo=Math.max(30,state.tempo-step);$('tempo').value=state.tempo;$('bpmLabel').textContent=state.tempo+' BPM';}
  // Tempo ramp: the passage remembers its tempo, one step faster after every two clean rounds in a row.
  if(state.tempoRamp&&state.phase!=='perform'){prev.tempo=state.tempo;if(rating===2&&prev.clean>=2&&prev.clean%2===0&&state.tempo<state.rampTarget){prev.tempo=Math.min(state.rampTarget,state.tempo+step);$('feedback').textContent='Two clean rounds in a row. This passage comes back at ♩ = '+prev.tempo+' (target '+state.rampTarget+').';}}
