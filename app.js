@@ -2,10 +2,11 @@ import {timingState,recordTimedRound,estimatePractice,timeText,dailyState,addPra
 import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWindow} from './midi.js?v=8';
 import {makeCues,cueState,stepBeat,alteredNoteHeads,spelledNotes,noteLabel} from './follower.js?v=15';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=6';
+import {loadRepertoire,mergeRepertoire} from './repertoire.js';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern,nextLoopPoints,loopRange} from './practice.js?v=21';
 import {renderWindow,contextMeasures,lineBars,firstSectionNode} from './view.js?v=3';
-import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=23';
+import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=24';
 import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore,listRecordings,storeRecording,deleteRecording,deleteRecordings} from './library.js?v=12';
 import {settings,settingByKey,groups,validate,actions,validKeys,presets,matchingPreset} from './settings.js?v=8';
 let score=builtinScore, activeId=BUILTIN, library=[], starts=measureStarts(builtinScore);
@@ -177,7 +178,7 @@ function fillSelectors(){
  $('scoreNotes').textContent=score.imported?'Imported piano score. Printed fingerings are retained where supplied. Playback counts quarter-note beats.':'Both accompaniment staves use bass clef. Middle C = C4. The top melody is a separate part.';
  $('melody').checked=false;$('melody').parentElement.hidden=!!score.imported;
  document.querySelectorAll('a[href^="Black-Is-the-Color"]').forEach(a=>a.hidden=!!score.imported);
- $('libraryWarnings').textContent=(score.warnings||[]).join(' ');$('downloadScore').hidden=!score.imported;$('removeScore').hidden=!score.imported;
+ $('libraryWarnings').textContent=(score.warnings||[]).join(' ');$('downloadScore').hidden=!score.imported;$('removeScore').hidden=!score.imported||!!library.find(e=>e.id===activeId)?.bundled;
 }
 fillSelectors();
 $('section').onchange=()=>{state.section=Number($('section').value);render();};$('hand').onchange=()=>{state.hand=$('hand').value;render();};$('tempo').oninput=()=>{$('bpmLabel').textContent=$('tempo').value+' BPM';};$('tempo').onchange=()=>{const was=playing,practice=transport?.practice,at=positionBeat;stopAudio(false);state.tempo=Number($('tempo').value);updatePosition(at);save();if(was)play(practice,at,true);};
@@ -189,7 +190,7 @@ document.querySelectorAll('[data-rating]').forEach(b=>b.onclick=()=>{if(!rateRou
  if(state.fadeHand!=='off'&&state.phase==='mix'&&rating===2){const name=state.fadeHand+'Volume';state[name]=Math.max(0,state[name]-20);$(name).value=state[name];$(name+'Label').textContent=state[name]+'%';$('feedback').textContent+=' '+(state.fadeHand==='left'?'Left':'Right')+'-hand playback is now '+state[name]+'%; play more of it yourself.';}
  save();renderProgress();renderPlan();});
 $('next').onclick=()=>{if(!state.rated){$('feedback').textContent='Rate your attempt first to complete this round. Navigation never adds a round.';return;}Object.assign(state,chooseLesson(state,sections,score.measures));state.rated=false;if(state.tempoRamp&&state.phase!=='perform'){const r=state.records[recordKey(state,state.section,state.hand)];if(r?.tempo)state.tempo=validate('tempo',r.tempo);}state.practiceTiming.roundSeconds=0;state.practiceTiming.running=true;render();if(!document.body.classList.contains('focus-mode'))$('lessonTitle').scrollIntoView({behavior:'smooth',block:'start'});};
-$('exportProgress').onclick=async()=>{save();try{const entries=await listScores();downloadJSON({version:2,activeId,entries,daily,settings:{device:display},progress:Object.fromEntries([BUILTIN,...entries.map(e=>e.id)].map(id=>[id,JSON.parse(localStorage.getItem(progressKey(id))||'{}')]))},'piano-repertoire-backup.json');$('importStatus').textContent='Library and progress backup downloaded.';}catch(error){$('importStatus').textContent='Backup failed: '+error.message;}};
+$('exportProgress').onclick=async()=>{save();try{const entries=library;downloadJSON({version:2,activeId,entries,daily,settings:{device:display},progress:Object.fromEntries([BUILTIN,...entries.map(e=>e.id)].map(id=>[id,JSON.parse(localStorage.getItem(progressKey(id))||'{}')]))},'piano-repertoire-backup.json');$('importStatus').textContent='Library and progress backup downloaded.';}catch(error){$('importStatus').textContent='Backup failed: '+error.message;}};
 async function playReference(n){if(micStream)return;$('playStatus').textContent='Keyboard reference: '+noteName(n);try{await audioContext();const generation=playGeneration;await piano.load([n]);if(generation!==playGeneration||micStream)return;piano.note(n,context.currentTime+.01,1,.75);highlight([{notes:[n]}]);}catch{$('playStatus').textContent='Audio unavailable.';}}
 // The on-screen and computer keyboards play into the virtual MIDI input when it is selected.
 const virtualHeld=new Set();let virtualOctave=0;
@@ -474,7 +475,17 @@ function checkedState(value,parts,measures){
  const clean={records};for(const key of ['phase','hand','section','stages','targets','customStart','customEnd','practiceTiming','notes','flags','history','measureStats','sectionText','targetsEdited',...settings.filter(s=>s.scope==='piece').map(s=>s.key)])if(Object.hasOwn(value,key))clean[key]=value[key];
  const result=freshState(clean,parts,measures);result.practiceTiming=timingState(clean.practiceTiming);return result;
 }
-async function initializeLibrary(){try{library=(await listScores()).map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename,DOMParser,entry.partId||null)};}catch{return entry;}});refreshLibrary();const id=localStorage.getItem('piano-active-score');if(id&&id!==BUILTIN)activateScore(id);}catch{$('libraryStatus').textContent='Browser storage is unavailable. The built-in piece still works; imported scores require browser storage.';}}
+async function initializeLibrary(){
+ let saved=[];try{saved=await listScores();}catch{$('libraryStatus').textContent='Browser storage is unavailable. Bundled pieces still work; imported scores require browser storage.';}
+ const bundled=await loadRepertoire();
+ library=mergeRepertoire(saved.map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename,DOMParser,entry.partId||null)};}catch{return entry;}}),bundled.entries);
+ refreshLibrary();
+ if(bundled.warnings.length)$('libraryStatus').textContent='Some bundled scores could not load. '+bundled.warnings.join(' ');
+ let id;try{id=localStorage.getItem('piano-active-score');}catch{}
+ const requested=new URLSearchParams(location.search).get('piece');
+ if(requested)id=library.find(e=>e.filename===requested+'.musicxml')?.id||id;
+ if(id&&id!==BUILTIN)activateScore(id);
+}
 initializeLibrary();
 
 

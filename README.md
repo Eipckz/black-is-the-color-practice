@@ -166,3 +166,25 @@ Connect the PX-330 USB-B port to a computer and select its MIDI input after gran
 Wait for my notes checks exact pitches and fresh attacks while retaining sustained notes. Check notes & rhythm uses at least one bar of count-in and reports on-time, early, late, missed, wrong-pitch and extra attacks. Balanced tolerance is 25% of one beat, bounded to 90-300 ms. Relaxed and tighter settings adjust this window. Timing uses browser receipt time, so hardware/audio latency can affect results. No hold-length, pedal, or fingering grade is assigned. Transport changes cancel the timed assessment; restart for a complete result.
 
 MIDI decoding, channel handling, chord matching, repeated-note attacks, rhythm windows, full-score simulated performances, device disconnection, and pending-permission cleanup are tested without physical hardware. A real PX-330 and iPad connection remain NOT TESTED. See the on-page manual and browser support links for setup.
+
+## Red River Valley (Unit 8, page 111)
+
+The repertoire library includes the original B-flat major exercise and the printed C-major transposition. Open `?piece=Red-River-Valley-Bb` or `?piece=Red-River-Valley-C` to select one directly. Existing pieces and progress are preserved; each version has independent practice progress and is included in library backups. Bundled pieces remain available without IndexedDB. The source photographs are not published.
+
+The one-beat pickup has no left-hand chord. Printed measure numbers exclude it; practice section ranges still use the nine sequential bars including the pickup. The app places the pickup on beat 4 of its first practice bar and pads the short final bar with a quarter rest, following its existing import behavior. MusicXML and Soundslice preserve the one-beat pickup and three-beat ending.
+
+| Printed measure | Left hand |
+| --- | --- |
+| Pickup | Rest |
+| 1 | I on beats 1 and 3, half notes |
+| 2 | I, whole note |
+| 3 | I, whole note |
+| 4 | V7, whole note, no reattack under the final two eighths |
+| 5 | I on beat 1; V7/IV on beat 3, half notes |
+| 6 | IV, whole note |
+| 7 | V7, whole note |
+| 8 | I, dotted half note |
+
+B-flat voicings, bottom to top: I = Bb2 D3 F3; V7 = A2 C3 Eb3 F3 (first inversion); V7/IV = Bb2 D3 F3 Ab3; IV = Bb2 Eb3 G3 (second inversion). The A-flat atop V7/IV follows the handwritten correction. The melody retains G4 to Gb4 in measure 6 and both written ties. The C-major copy raises every note by a diatonic major second, including Gb to Ab. Allegro is printed without a number; 112 BPM is an editorial playback tempo and can be slowed in the app.
+
+Canonical editable sources: `repertoire/Red-River-Valley-Bb.musicxml` and `repertoire/Red-River-Valley-C.musicxml`. Rebuild with Python and music21 using `python scripts/build-red-river.py`. Roman numerals are notation labels, with all sounding accompaniment supplied by the written left-hand notes. No extra automatic chords are generated.

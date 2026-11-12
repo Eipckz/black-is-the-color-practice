@@ -27,7 +27,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
   // Meters may change: every measure keeps its own meter and absolute start in quarter-note beats.
   const starts=[0],meters=[];
   const measureKeys=[];
-  const raw={right:[],left:[]},clefs={right:'treble',left:'bass'},marks={right:[],left:[]},openWedge={right:null,left:null};
+  const raw={right:[],left:[]},clefs={right:'treble',left:'bass'},marks={right:[],left:[]},chordLabels={right:[],left:[]},openWedge={right:null,left:null};
   const warnings=new Set(['Playback uses a steady tempo. Follow expressive dynamics, pedal, ornaments, and tempo changes yourself.']);
   measures.forEach((measure,index)=>{
     const attr=children(measure,'attributes')[0];
@@ -45,7 +45,7 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
       if(['backup','forward'].includes(element.localName)){cursor+=(element.localName==='backup'?-1:1)*number(element,'duration',0)/divisions;if(cursor<-.00001)fail('Invalid backward position in MusicXML.');reached=Math.max(reached,cursor);continue;}
       // Dynamics, hairpins and pedal marks at their written position (engraving only; playback stays even).
       if(element.localName==='direction'){const hand=number(element,'staff',1)===2?'left':'right',at=base+cursor+number(element,'offset',0)/divisions;
-        for(const type of element.querySelectorAll('direction-type > *')){if(type.localName==='dynamics'){const name=dynamicName(type.firstElementChild?.localName);if(name)marks[hand].push({beat:at,dynamic:name});}else if(type.localName==='wedge'){const kind=type.getAttribute('type');if(kind==='crescendo'||kind==='diminuendo'){openWedge[hand]=kind;marks[hand].push({beat:at,wedge:kind});}else if(kind==='stop'&&openWedge[hand]){marks[hand].push({beat:at,wedge:'stop-'+openWedge[hand]});openWedge[hand]=null;}}else if(type.localName==='pedal'){const kind=type.getAttribute('type');if(['start','stop','change'].includes(kind))marks[hand].push({beat:at,pedal:kind});}}
+        for(const type of element.querySelectorAll('direction-type > *')){if(type.localName==='words'&&/^(I|IV|V7|V7\/IV)$/.test(type.textContent.trim())){chordLabels[hand].push({beat:at,text:type.textContent.trim()});}else if(type.localName==='dynamics'){const name=dynamicName(type.firstElementChild?.localName);if(name)marks[hand].push({beat:at,dynamic:name});}else if(type.localName==='wedge'){const kind=type.getAttribute('type');if(kind==='crescendo'||kind==='diminuendo'){openWedge[hand]=kind;marks[hand].push({beat:at,wedge:kind});}else if(kind==='stop'&&openWedge[hand]){marks[hand].push({beat:at,wedge:'stop-'+openWedge[hand]});openWedge[hand]=null;}}else if(type.localName==='pedal'){const kind=type.getAttribute('type');if(['start','stop','change'].includes(kind))marks[hand].push({beat:at,pedal:kind});}}
         continue;}
       if(element.localName!=='note')continue;
       const duration=number(element,'duration',0)/divisions;if(!(duration>0))fail('Every note needs a positive duration. Export a measured practice copy.');
@@ -64,17 +64,17 @@ export function parseMusicXML(source, filename='Imported score', Parser=DOMParse
       reached=Math.max(reached,start+duration);
     }
     // A short opening measure is a pickup: it ends on the first barline. Other short measures are padded at the end.
-    if(index===0&&reached<length-.00001){for(const n of [...raw.right,...raw.left,...marks.right,...marks.left])n.beat+=length-reached;warnings.add('Pickup measure placed at the end of bar 1.');}
+    if(index===0&&reached<length-.00001){for(const n of [...raw.right,...raw.left,...marks.right,...marks.left,...chordLabels.right,...chordLabels.left])n.beat+=length-reached;warnings.add('Pickup measure placed at the end of bar 1.');}
     else if(reached<length-.00001)warnings.add('Short measures are padded with rests to the full meter.');
     starts.push(base+length);
   });
   if(!raw.right.length&&!raw.left.length)fail('The score contains no playable piano notes.');
   if(measures.length>written.length)warnings.add('Repeats and endings are written out in playing order; bar numbers show which time through.');
-  const seen=new Map(),printedMeasures=order.map(i=>{const count=(seen.get(i)||0)+1;seen.set(i,count);return (written[i].getAttribute('number')||String(i+1))+(count>1?' ('+count+(count===2?'nd':count===3?'rd':'th')+' time)':'');});
+  const seen=new Map(),printedMeasures=order.map(i=>{const count=(seen.get(i)||0)+1;seen.set(i,count);return (written[i].getAttribute('implicit')==='yes'&&written[i].getAttribute('number')==='0'?'Pickup':written[i].getAttribute('number')||String(i+1))+(count>1?' ('+count+(count===2?'nd':count===3?'rd':'th')+' time)':'');});
   const voices=Object.entries(raw).map(([id,notes])=>({id,events:segmentNotes(notes,starts)}));
   // Separate MusicXML voices per staff, for voice-aware engraving: one abcjs voice each, stems up then down.
   const voiceParts=Object.fromEntries(Object.entries(raw).map(([id,notes])=>[id,[...new Set(notes.map(n=>n.voice))].sort((a,b)=>Number(a)-Number(b)||a.localeCompare(b)).map(voice=>({voice,events:segmentNotes(notes.filter(n=>n.voice===voice),starts)}))]).filter(([,parts])=>parts.length>1));
-  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',meters,measureStarts:starts,beatsPerMeasure:starts[1],...(measures.length>written.length?{printedMeasures}:{}),...(marks.right.length||marks.left.length?{expressions:marks}:{}),...(Object.keys(voiceParts).length?{voiceParts}:{}),clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
+  return {title:text(doc,'work-title',text(doc,'movement-title',filename.replace(/\.(musicxml|xml|mxl)$/i,''))).slice(0,160),tempo,measures:measures.length,meter:meter||'4/4',meters,measureStarts:starts,beatsPerMeasure:starts[1],...(printedMeasures.some((n,i)=>n!==String(i+1))?{printedMeasures}:{}),...(chordLabels.right.length||chordLabels.left.length?{chordLabels}:{}),...(marks.right.length||marks.left.length?{expressions:marks}:{}),...(Object.keys(voiceParts).length?{voiceParts}:{}),clefs,measureKeys,voices,warnings:[...warnings],partId:selected.getAttribute('id'),imported:true};
 }
 // Repeats and endings written out in playing order, as indexes into the written measures. A backward
 // repeat returns to the last forward repeat (or the start, or just after the previous repeat); an
@@ -157,6 +157,7 @@ export function importedExcerpt(score,hand,start,end,large=false,layout={}){
         const e=inBar[i];
         if(!tupletRemaining){const t=tupletAt(inBar,i,group===1.5);factor=t?.factor??1;if(t){abc+='('+t.n+':'+t.m+':'+t.count;tupletRemaining=t.count;}}
         const duration=e.duration*factor;
+        if(primary)abc+=(score.chordLabels?.[id]||[]).filter(k=>Math.abs(k.beat-e.beat)<1e-6).map(k=>'\"_'+k.text+'\"').join('');
         // A space breaks the beam: beam contiguous notes shorter than a quarter within one beat group.
         const n=inBar[i+1],beamed=!tupletRemaining&&n&&e.notes.length&&n.notes.length&&duration<1&&n.duration*(tupletAt(inBar,i+1,group===1.5)?.factor??1)<1&&Math.abs(n.beat-e.beat-e.duration)<1e-6&&Math.floor((e.beat-barStart+1e-6)/group)===Math.floor((n.beat-barStart+1e-6)/group);
         const separator=tupletRemaining&&--tupletRemaining||beamed?'':' ';
