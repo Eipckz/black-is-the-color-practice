@@ -2,14 +2,20 @@ import {timingState,recordTimedRound,estimatePractice,timeText,dailyState,addPra
 import {MidiKeys,MidiConnection,midiTargets,matchesTarget,RhythmCheck,timingWindow} from './midi.js?v=8';
 import {makeCues,cueState,stepBeat,alteredNoteHeads,spelledNotes,noteLabel} from './follower.js?v=15';
 import {PianoSound, scheduleFrom, encodeWav} from './piano.js?v=6';
-import {loadRepertoire,mergeRepertoire} from './repertoire.js';
+import {loadRepertoire,mergeRepertoire} from './repertoire.js?v=2';
 import {score as builtinScore} from './score-data.js';
 import {freshState,rememberStage,switchStage,rateRound,chooseLesson,makeSections,recordKey,recordKeyPattern,nextLoopPoints,loopRange} from './practice.js?v=21';
 import {renderWindow,contextMeasures,lineBars,firstSectionNode} from './view.js?v=3';
 import {parseMusicXML,readMusicXMLFile,importedExcerpt} from './import-score.js?v=24';
-import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore,listRecordings,storeRecording,deleteRecording,deleteRecordings} from './library.js?v=12';
+import {BUILTIN,progressKey,scoreId,listScores,storeScore,deleteScore,listRecordings,storeRecording,deleteRecording,deleteRecordings} from './library.js?v=13';
 import {settings,settingByKey,groups,validate,actions,validKeys,presets,matchingPreset} from './settings.js?v=8';
-let score=builtinScore, activeId=BUILTIN, library=[], starts=measureStarts(builtinScore);
+const bundled = await loadRepertoire();
+const opening = bundled.entries[0];
+if (!opening) {
+ document.getElementById('brandTitle').textContent = 'Could not load Red River Valley. Refresh to retry.';
+ throw new Error(bundled.warnings.join(' '));
+}
+let score=opening.score, activeId=opening.id, library=[...bundled.entries], starts=measureStarts(score);
 import {noteName,frequency,eventsFor,voiceEventsFor,detectPitch,acceptPitch,validateProgress,measureStarts,measureAt} from './engine.js?v=9';
 const $=id=>document.getElementById(id);
 const builtinSections=[
@@ -190,7 +196,7 @@ document.querySelectorAll('[data-rating]').forEach(b=>b.onclick=()=>{if(!rateRou
  if(state.fadeHand!=='off'&&state.phase==='mix'&&rating===2){const name=state.fadeHand+'Volume';state[name]=Math.max(0,state[name]-20);$(name).value=state[name];$(name+'Label').textContent=state[name]+'%';$('feedback').textContent+=' '+(state.fadeHand==='left'?'Left':'Right')+'-hand playback is now '+state[name]+'%; play more of it yourself.';}
  save();renderProgress();renderPlan();});
 $('next').onclick=()=>{if(!state.rated){$('feedback').textContent='Rate your attempt first to complete this round. Navigation never adds a round.';return;}Object.assign(state,chooseLesson(state,sections,score.measures));state.rated=false;if(state.tempoRamp&&state.phase!=='perform'){const r=state.records[recordKey(state,state.section,state.hand)];if(r?.tempo)state.tempo=validate('tempo',r.tempo);}state.practiceTiming.roundSeconds=0;state.practiceTiming.running=true;render();if(!document.body.classList.contains('focus-mode'))$('lessonTitle').scrollIntoView({behavior:'smooth',block:'start'});};
-$('exportProgress').onclick=async()=>{save();try{const entries=library;downloadJSON({version:2,activeId,entries,daily,settings:{device:display},progress:Object.fromEntries([BUILTIN,...entries.map(e=>e.id)].map(id=>[id,JSON.parse(localStorage.getItem(progressKey(id))||'{}')]))},'piano-repertoire-backup.json');$('importStatus').textContent='Library and progress backup downloaded.';}catch(error){$('importStatus').textContent='Backup failed: '+error.message;}};
+$('exportProgress').onclick=async()=>{save();try{const entries=library;downloadJSON({version:2,activeId,entries,daily,settings:{device:display},progress:Object.fromEntries(entries.map(e=>e.id).map(id=>[id,JSON.parse(localStorage.getItem(progressKey(id))||'{}')]))},'piano-repertoire-backup.json');$('importStatus').textContent='Library and progress backup downloaded.';}catch(error){$('importStatus').textContent='Backup failed: '+error.message;}};
 async function playReference(n){if(micStream)return;$('playStatus').textContent='Keyboard reference: '+noteName(n);try{await audioContext();const generation=playGeneration;await piano.load([n]);if(generation!==playGeneration||micStream)return;piano.note(n,context.currentTime+.01,1,.75);highlight([{notes:[n]}]);}catch{$('playStatus').textContent='Audio unavailable.';}}
 // The on-screen and computer keyboards play into the virtual MIDI input when it is selected.
 const virtualHeld=new Set();let virtualOctave=0;
@@ -447,8 +453,8 @@ function renderPlan(){
 }
 $('saveTargets').onclick=()=>{const values=['targetLearn','targetMix','targetPolish'].map(id=>Number($(id).value));if(values.some(n=>!Number.isInteger(n)||n<1||n>10000)){$('targetStatus').textContent='Enter whole numbers between 1 and 10,000.';return;}['learn','mix','polish'].forEach((p,i)=>state.targets[p]=values[i]);state.targetsEdited=true;save();renderPlan();$('targetStatus').textContent='Targets saved. Extra rounds are always available.';};
 function downloadJSON(data,name){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function refreshLibrary(){const select=$('scoreLibrary');select.replaceChildren(new Option(builtinScore.title,BUILTIN));for(const entry of library)select.append(new Option(entry.score.title,entry.id));select.value=activeId;renderLibraryList();}
-function activateScore(id){stopReplay();setTimeout(renderRecordings);const entry=library.find(e=>e.id===id);if(id!==BUILTIN&&!entry)return;stopAudio();stopMic();save();activeId=id;score=id===BUILTIN?builtinScore:entry.score;starts=measureStarts(score);sections=id===BUILTIN?builtinSections:makeSections(score.measures);storageKey=progressKey(id);loadState();fillSelectors();render();refreshLibrary();try{localStorage.setItem('piano-active-score',id);}catch{}$('midiResults').textContent='';}
+function refreshLibrary(){const select=$('scoreLibrary');select.replaceChildren();for(const entry of library)select.append(new Option(entry.score.title,entry.id));select.value=activeId;renderLibraryList();}
+function activateScore(id){stopReplay();setTimeout(renderRecordings);const entry=library.find(e=>e.id===id);if(!entry)return;stopAudio();stopMic();save();activeId=id;score=id===BUILTIN?builtinScore:entry.score;starts=measureStarts(score);sections=id===BUILTIN?builtinSections:makeSections(score.measures);storageKey=progressKey(id);loadState();fillSelectors();render();refreshLibrary();try{localStorage.setItem('piano-active-score',id);}catch{}$('midiResults').textContent='';}
 $('scoreLibrary').onchange=()=>activateScore($('scoreLibrary').value);
 $('addScores').onclick=()=>$('scoreFiles').click();
 $('scoreFiles').onchange=async event=>{const files=[...event.target.files];if(!files.length)return;$('addScores').disabled=true;$('scoreLibrary').disabled=true;const results=[];let last=null;
@@ -477,21 +483,21 @@ function checkedState(value,parts,measures){
 }
 async function initializeLibrary(){
  let saved=[];try{saved=await listScores();}catch{$('libraryStatus').textContent='Browser storage is unavailable. Bundled pieces still work; imported scores require browser storage.';}
- const bundled=await loadRepertoire();
+
  library=mergeRepertoire(saved.map(entry=>{try{return {...entry,score:parseMusicXML(entry.source,entry.filename,DOMParser,entry.partId||null)};}catch{return entry;}}),bundled.entries);
  refreshLibrary();
  if(bundled.warnings.length)$('libraryStatus').textContent='Some bundled scores could not load. '+bundled.warnings.join(' ');
  let id;try{id=localStorage.getItem('piano-active-score');}catch{}
  const requested=new URLSearchParams(location.search).get('piece');
  if(requested)id=library.find(e=>e.filename===requested+'.musicxml')?.id||id;
- if(id&&id!==BUILTIN)activateScore(id);
+ activateScore(library.some(entry=>entry.id===id)?id:opening.id);
 }
 initializeLibrary();
 
 
 function renderLibraryList(){
  const list=$('libraryList');list.replaceChildren();
- for(const entry of [{id:BUILTIN,score:builtinScore},...library]){
+ for(const entry of library){
   let saved={};try{saved=JSON.parse(localStorage.getItem(progressKey(entry.id))||'{}');}catch{}
   const phase=entry.id===activeId?state.phase:saved.phase,button=document.createElement('button'),title=document.createElement('strong'),detail=document.createElement('span');
   button.type='button';button.className='library-piece';button.setAttribute('aria-pressed',String(entry.id===activeId));title.textContent=entry.score.title;detail.textContent=entry.score.measures+' measures · '+({learn:'Separate hands',mix:'Hands together',polish:'Polishing',perform:'Whole piece'}[phase]||'Ready to start');button.append(title,detail);button.onclick=()=>activateScore(entry.id);list.append(button);
@@ -518,4 +524,4 @@ renderEstimate();
 function choosePianoPart(parts,filename){
  return new Promise(resolve=>{const dialog=$('pianoPartDialog'),select=$('pianoPart');select.replaceChildren();for(const part of parts)select.append(new Option(part.name+' ('+part.id+')',part.id));$('pianoPartFile').textContent=filename;dialog.returnValue='cancel';dialog.onclose=()=>resolve(dialog.returnValue==='import'?select.value:null);dialog.showModal();});
 }
-$('removeScore').onclick=async()=>{const entry=library.find(e=>e.id===activeId);if(!entry)return;if(!confirm('Remove '+entry.score.title+' and its practice progress from this browser? Download a backup first if you want to keep it.'))return;try{await deleteScore(entry.id);await deleteRecordings(entry.id).catch(()=>{});activateScore(BUILTIN);library=library.filter(e=>e.id!==entry.id);localStorage.removeItem(progressKey(entry.id));refreshLibrary();$('libraryStatus').textContent=entry.score.title+' removed.';}catch(error){$('libraryStatus').textContent='Removal failed: '+error.message;}};
+$('removeScore').onclick=async()=>{const entry=library.find(e=>e.id===activeId);if(!entry)return;if(!confirm('Remove '+entry.score.title+' and its practice progress from this browser? Download a backup first if you want to keep it.'))return;try{await deleteScore(entry.id);await deleteRecordings(entry.id).catch(()=>{});activateScore(opening.id);library=library.filter(e=>e.id!==entry.id);localStorage.removeItem(progressKey(entry.id));refreshLibrary();$('libraryStatus').textContent=entry.score.title+' removed.';}catch(error){$('libraryStatus').textContent='Removal failed: '+error.message;}};

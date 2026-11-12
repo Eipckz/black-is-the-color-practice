@@ -1,5 +1,5 @@
 import {parseMusicXML} from './import-score.js?v=24';
-import {scoreId} from './library.js?v=12';
+import {scoreId} from './library.js?v=13';
 
 export const repertoireFiles=['Red-River-Valley-Bb.musicxml','Red-River-Valley-C.musicxml'];
 // Bundled pieces use the same content identity as imports and portable backups.

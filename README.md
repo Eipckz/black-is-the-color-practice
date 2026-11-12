@@ -1,6 +1,6 @@
 # At the Piano: repertoire practice
 
-A static GitHub Pages practice room with a persistent score library. The original Black Is the Color accompaniment remains included. No account, server, analytics, or score uploads.
+A static GitHub Pages practice room with a persistent score library. The library starts with Red River Valley in B-flat major and C major. No account, server, analytics, or score uploads.
 
 Every note to play now is highlighted in one colour (orange by default) in both hands; choose each hand in its own colour if you prefer. Sharps and flats from the key signature and accidentals against it (including naturals that cancel the key) get separate, customizable colours, or colour only the accidentals, or none. A current note is entirely the highlight colour, with a thin outline in its accidental colour.
 
@@ -169,7 +169,7 @@ MIDI decoding, channel handling, chord matching, repeated-note attacks, rhythm w
 
 ## Red River Valley (Unit 8, page 111)
 
-The repertoire library includes the original B-flat major exercise and the printed C-major transposition. Open `?piece=Red-River-Valley-Bb` or `?piece=Red-River-Valley-C` to select one directly. Existing pieces and progress are preserved; each version has independent practice progress and is included in library backups. Bundled pieces remain available without IndexedDB. The source photographs are not published.
+The repertoire library includes the original B-flat major exercise and the printed C-major transposition. Open `?piece=Red-River-Valley-Bb` or `?piece=Red-River-Valley-C` to select one directly. The current library opens with Red River Valley. Each version has independent practice progress and is included in library backups. Bundled pieces remain available without IndexedDB. The source photographs are not published.
 
 The one-beat pickup has no left-hand chord. Printed measure numbers exclude it; practice section ranges still use the nine sequential bars including the pickup. The app places the pickup on beat 4 of its first practice bar and pads the short final bar with a quarter rest, following its existing import behavior. MusicXML and Soundslice preserve the one-beat pickup and three-beat ending.
 
